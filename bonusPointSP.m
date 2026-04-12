@@ -6,6 +6,7 @@ clc
 
 load("tracesbar1.mat");
 
+% adding variable names
 varNames = ["pbar2438", "pbar2439", "pbar2440", "pbar2441", "pbar2442", ...
     "pbar2443", "pbar2444", "pbar2445", "pbar2446"];
 
