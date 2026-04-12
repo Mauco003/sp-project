@@ -13,3 +13,7 @@ burningRateData = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
                 7.1; 8.4; 8.3; 8.6; 8.8; 9.0; 9.2];
 
 [a, aSigma, n, nSigma, R2] = Uncertainty(pressureData, burningRateData);
+
+
+
+%%
