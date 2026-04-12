@@ -1,7 +1,7 @@
 clear
 close all
 clc
-
+%ciao a tutti
 %% extract data
 
 load("tracesbar1.mat");
