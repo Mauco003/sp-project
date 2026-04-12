@@ -77,16 +77,12 @@ xProfile = [xConv, xDiv];
 rProfile = [rConv, rDiv];
 
 % Exporting data
-nozzle.xConv = xConv;
-nozzle.rConv = rConv;
-nozzle.xDiv = xDiv;
-nozzle.rDiv = rDiv;
-nozzle.xProfile = xProfile;
-nozzle.rProfile = rProfile;
+nozzle.xProfile = [0, lConv, lTotal];
+nozzle.rProfile = [rcc, rt, re];
 
+nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
-nozzle.Acc = Acc;
 
 nozzle.ve    = ve;
 nozzle.cstar = cstar;
