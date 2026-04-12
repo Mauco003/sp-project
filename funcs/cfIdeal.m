@@ -1,4 +1,4 @@
-function CF = CFideal(gamma, pe, pc)
+function cf = cfIdeal(gamma, pe, pc)
 % CFIDEAL
 % Ideal thrust coefficient for OPTIMAL EXPANSION
 %
@@ -12,6 +12,6 @@ function CF = CFideal(gamma, pe, pc)
 
 term1 = (2*gamma^2/(gamma - 1)) * (2/(gamma + 1))^((gamma + 1)/(gamma - 1));
 term2 = 1 - (pe/pc)^((gamma - 1)/gamma);
-CF = sqrt(term1*term2);
+cf = sqrt(term1*term2);
 
 end

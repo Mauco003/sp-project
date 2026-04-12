@@ -1,4 +1,4 @@
-function eps = epsilon(gamma, pe, pc)
+function eps = computeEpsilon(gamma, pe, pc)
 % EPSILON
 % Expansion ratio
 %

@@ -1,279 +1,166 @@
-function noz = nozzleDesign(in)
+function nozzle = nozzleDesign(thrust, tc, pc, pe, gamma, constants, options)
 %NOZZLEDESIGN Preliminary nozzle geometry model
 %
-% This function supports:
-%   - conical nozzles
-%   - bell nozzles (partially implemented)
-%
-% Inputs expected in "in":
-%   in.req.Thrust
-%   in.chamber.pc
-%   in.thermo.gamma
-%   in.nozzle.CF_opt
-%   in.nozzle.epsilon
-%   in.nozzle.type
-%
-% Optional:
-%   in.nozzle.alpha_deg
-%   in.nozzle.beta_deg
-%   in.nozzle.lambdaDiv
-%   in.chamber.Mcc
-%   in.chamber.r_cc
-%   in.nozzle.bellFrac
-%   in.nozzle.makePlot
-%
-% Outputs in "noz":
-%   throat/exit areas and radii
-%   convergence/divergence lengths
-%   lambda
-%   chamber area/radius
-%   bell preliminary length if requested
-
-%% ------------------------------------------------------------------------
-% 0) Read mandatory inputs
-% -------------------------------------------------------------------------
-Fopt    = in.req.Thrust;
-pc      = in.chamber.pc;
-gamma   = in.thermo.gamma;
-typeStr = lower(in.nozzle.type);
-
-pe = in.nozzle.pe;
-epsRatio = in.nozzle.eps;
-
-CFopt = CFideal(gamma, pe, pc);
-noz.CT = CFopt;
-
-%% ------------------------------------------------------------------------
-% 1) Defaults / optional inputs
-% -------------------------------------------------------------------------
-if isfield(in.nozzle, 'alpha_deg') && ~isempty(in.nozzle.alpha_deg)
-
-    alpha_deg = in.nozzle.alpha_deg;
-
-elseif isfield(in.nozzle, 'lambdaDiv') && ~isempty(in.nozzle.lambdaDiv)
-
-    alpha_deg = acosd(2*in.nozzle.lambdaDiv - 1);
-
-else
-
-    alpha_deg = 15;   % default assumption
-
+arguments
+    thrust
+    tc
+    pc
+    pe
+    gamma
+    constants   Constants = Constants()
+    options.alpha = 15 * pi/180
+    options.beta  = 30 * pi/180
+    options.lambdaDiv = []
+    options.machCC = 0.2
+    options.ccRadius = []
+    options.plot = false
+    options.showSummary = false
 end
 
-if isfield(in.nozzle, 'beta_deg') && ~isempty(in.nozzle.beta_deg)
-    beta_deg = in.nozzle.beta_deg;
+%% Defaults / optional inputs
+if ~isempty(options.lambdaDiv)
+    alpha = acos(2*options.lambdaDiv - 1);
 else
-    beta_deg = 30;    % default assumption
+    alpha = options.alpha;
+    lambdaDiv = (1 + cos(alpha))/2;
 end
 
-if isfield(in.chamber, 'Mcc') && ~isempty(in.chamber.Mcc)
-    Mcc = in.chamber.Mcc;
-else
-    Mcc = 0.2;        % default assumption
-end
+beta = options.beta;
+machCC = options.machCC;
 
-if isfield(in.nozzle, 'bellFrac') && ~isempty(in.nozzle.bellFrac)
-    bellFrac = in.nozzle.bellFrac;
-else
-    bellFrac = 0.60;  % default assumption
-end
+g0    = constants.g0;
+R     = constants.R;
 
-if isfield(in.nozzle, 'makePlot') && ~isempty(in.nozzle.makePlot)
-    makePlot = in.nozzle.makePlot;
-else
-    makePlot = true;
-end
-if isfield(in.nozzle, 'showSummary') && ~isempty(in.nozzle.showSummary)
-    showSummary = in.nozzle.showSummary;
-else
-    showSummary = true;
-end
-%% ------------------------------------------------------------------------
-% 2) Throat and exit areas
-% -------------------------------------------------------------------------
-noz.At = Fopt / (pc * CFopt);
-noz.Ae = epsRatio * noz.At;
+% Ideal thermodynamic performance
+ve    = exhaustVelocityIdeal(gamma, R, tc, pe, pc);
+cstar = cstarIdeal(R, tc, gamma);
+Isp   = ve / g0;
+mdot  = thrust/(Isp*g0);
 
-noz.rt = sqrt(noz.At/pi);
-noz.re = sqrt(noz.Ae/pi);
+% Throat and exit areas
+cf = cfIdeal(gamma, pe, pc);
 
-noz.dt = 2*noz.rt;
-noz.de = 2*noz.re;
+At = thrust / (pc * cf);
+epsilon = computeEpsilon(gamma, pe, pc);
+Ae = epsilon * At;
 
-%% ------------------------------------------------------------------------
-% 3) Divergence section (conical-equivalent)
-% -------------------------------------------------------------------------
-noz.alpha_deg = alpha_deg;
-noz.alpha_rad = deg2rad(alpha_deg);
+rt = sqrt(At/pi);
+re = sqrt(Ae/pi);
 
-if isfield(in.nozzle, 'lambdaDiv') && ~isempty(in.nozzle.lambdaDiv)
-    noz.lambdaDiv = in.nozzle.lambdaDiv;
-else
-    noz.lambdaDiv = (1 + cos(noz.alpha_rad))/2;
-end
 % Conical divergence length
-noz.Ldiv_conical = (noz.re - noz.rt) / tan(noz.alpha_rad);
+lDiv = (re - rt) / tan(alpha);
 
-%% ------------------------------------------------------------------------
-% 4) Chamber section from Mcc if r_cc is not given
-% -------------------------------------------------------------------------
-if isfield(in.chamber, 'r_cc') && ~isempty(in.chamber.r_cc)
-    noz.rcc = in.chamber.r_cc;
-    noz.Acc = pi * noz.rcc^2;
-    noz.Mcc = NaN;   % not used because r_cc was directly imposed
+% Chamber section from machCC if r_cc is not given
+if ~isempty(options.ccRadius)
+    rcc = ccRadius;
+    Acc = pi * rcc^2;
+    machCC = machFromAreaRatio(Acc/At, gamma, 'subsonic');   % not used because r_cc was directly imposed
 else
-    noz.Mcc = Mcc;
-    noz.Acc = noz.At * areaRatioIsen(Mcc, gamma);
-    noz.rcc = sqrt(noz.Acc/pi);
+    Acc = At * areaRatioIsen(machCC, gamma);
+    rcc = sqrt(Acc/pi);
 end
 
-noz.dcc = 2*noz.rcc;
+% Convergent section
+lConv = (rcc - rt) / tan(beta);
 
-%% ------------------------------------------------------------------------
-% 5) Convergent section
-% -------------------------------------------------------------------------
-noz.beta_deg = beta_deg;
-noz.beta_rad = deg2rad(beta_deg);
+% Geometry by nozzle type
+lTotal = lConv + lDiv;
 
-noz.Lconv = (noz.rcc - noz.rt) / tan(noz.beta_rad);
+% Simple piecewise geometry for plotting
+xConv = linspace(-lConv, 0, 100);
+rConv = linspace(rcc, rt, 100);
 
-%% ------------------------------------------------------------------------
-% 6) Geometry by nozzle type
-% -------------------------------------------------------------------------
-switch typeStr
+xDiv = linspace(0, lDiv, 150);
+rDiv = linspace(rt, re, 150);
 
-    case 'conical'
+xProfile = [xConv, xDiv];
+rProfile = [rConv, rDiv];
 
-        noz.type = 'conical';
-        noz.Ldiv = noz.Ldiv_conical;
-        noz.Ltotal_nozzle = noz.Lconv + noz.Ldiv;
+% Exporting data
+nozzle.xConv = xConv;
+nozzle.rConv = rConv;
+nozzle.xDiv = xDiv;
+nozzle.rDiv = rDiv;
+nozzle.xProfile = xProfile;
+nozzle.rProfile = rProfile;
 
-        % Simple piecewise geometry for plotting
-        x_conv = linspace(-noz.Lconv, 0, 100);
-        r_conv = linspace(noz.rcc, noz.rt, 100);
+nozzle.At = At;
+nozzle.Ae = Ae;
+nozzle.Acc = Acc;
 
-        x_div = linspace(0, noz.Ldiv, 150);
-        r_div = linspace(noz.rt, noz.re, 150);
+nozzle.ve    = ve;
+nozzle.cstar = cstar;
+nozzle.Isp   = Isp;
+nozzle.mDot  = mdot;
+nozzle.cf    = cf;
+nozzle.machCC = machCC;
 
-        noz.x_profile = [x_conv, x_div];
-        noz.r_profile = [r_conv, r_div];
-
-        if makePlot
-            figure;
-            plot(noz.x_profile,  noz.r_profile, 'LineWidth', 1.5); hold on;
-            plot(noz.x_profile, -noz.r_profile, 'LineWidth', 1.5);
-            axis equal;
-            grid on;
-            xlabel('x [m]');
-            ylabel('r [m]');
-            title('Axisymmetric conical nozzle');
-        end
-
-    case 'bell'
-
-        noz.type = 'bell';
-
-        % Bell nozzle length is defined as a fraction of equivalent conical length
-        noz.Lbell = bellFrac * noz.Ldiv_conical;
-        noz.Ldiv = noz.Lbell;
-        noz.Ltotal_nozzle = noz.Lconv + noz.Ldiv;
-
-        % Placeholder fields for future Rao contour implementation
-        noz.bellFrac = bellFrac;
-        noz.raoImplemented = false;
-        noz.x_profile = [];
-        noz.r_profile = [];
-
-        % For now: no final contour, only store the target bell length
-        % TODO:
-        %   - throat blend radius
-        %   - Rao initial angle
-        %   - Rao exit angle
-        %   - parabolic / bell contour generation
-
-        if makePlot
-            figure;
-            % Plot only convergent section + straight placeholder divergence
-            x_conv = linspace(-noz.Lconv, 0, 100);
-            r_conv = linspace(noz.rcc, noz.rt, 100);
-
-            x_div = linspace(0, noz.Lbell, 150);
-            r_div = linspace(noz.rt, noz.re, 150); % TEMPORARY placeholder only
-
-            x_prof = [x_conv, x_div];
-            r_prof = [r_conv, r_div];
-
-            plot(x_prof,  r_prof, 'LineWidth', 1.5); hold on;
-            plot(x_prof, -r_prof, 'LineWidth', 1.5);
-            axis equal;
-            grid on;
-            xlabel('x [m]');
-            ylabel('r [m]');
-            title('Bell nozzle (temporary placeholder contour)');
-        end
-
-    otherwise
-        error('Unknown nozzle type. Use "conical" or "bell".');
+% Plot
+if options.plot
+    figure;
+    plot(xProfile,  rProfile, 'LineWidth', 1.5); hold on;
+    plot(xProfile, -rProfile, 'LineWidth', 1.5);
+    axis equal;
+    grid on;
+    xlabel('x [m]');
+    ylabel('r [m]');
+    title('Axisymmetric conical nozzle');
 end
 
-%% ------------------------------------------------------------------------
-% 7) Summary output
-% -------------------------------------------------------------------------
-if showSummary
-
+% Print summary
+if options.showSummary
     fprintf('\n');
+    fprintf('====================================================\n');
+    fprintf('              PERFORMANCE MODEL SUMMARY             \n');
+    fprintf('====================================================\n');
+    fprintf('ve (ideal)              : %.6f m/s\n', ve);
+    fprintf('c* (ideal)              : %.6f m/s\n', cstar);
+    fprintf('Isp (ideal)             : %.6f s\n', Isp);
+    fprintf('mdot (ideal)             : %.6f kg/s\n', mdot);
+    fprintf('====================================================\n');
+    fprintf('\n');
+
     fprintf('====================================================\n');
     fprintf('                 NOZZLE DESIGN SUMMARY              \n');
     fprintf('====================================================\n');
 
-    fprintf('Type                    : %s\n', noz.type);
-    fprintf('CT                      : %.4f [-]\n', noz.CT);
+    fprintf('Type                    : %s\n', type);
+    fprintf('CT                      : %.4f [-]\n', CT);
     fprintf('Epsilon                 : %.4f [-]\n', eps);
-    fprintf('Lambda                  : %.4f [-]\n', noz.lambdaDiv);
+    fprintf('Lambda                  : %.4f [-]\n', lambdaDiv);
 
     fprintf('\n');
     fprintf('--------------- Areas ---------------\n');
-    fprintf('At                      : %.6e m^2\n', noz.At);
-    fprintf('Ae                      : %.6e m^2\n', noz.Ae);
-    fprintf('Acc                     : %.6e m^2\n', noz.Acc);
+    fprintf('At                      : %.6e m^2\n', At);
+    fprintf('Ae                      : %.6e m^2\n', Ae);
+    fprintf('Acc                     : %.6e m^2\n', Acc);
 
     fprintf('\n');
     fprintf('-------------- Radii ----------------\n');
-    fprintf('rt                      : %.6f m\n', noz.rt);
-    fprintf('re                      : %.6f m\n', noz.re);
-    fprintf('rcc                     : %.6f m\n', noz.rcc);
+    fprintf('rt                      : %.6f m\n', rt);
+    fprintf('re                      : %.6f m\n', re);
+    fprintf('rcc                     : %.6f m\n', rcc);
 
     fprintf('\n');
     fprintf('------------- Diameters -------------\n');
-    fprintf('dt                      : %.6f m\n', noz.dt);
-    fprintf('de                      : %.6f m\n', noz.de);
-    fprintf('dcc                     : %.6f m\n', noz.dcc);
+    fprintf('dt                      : %.6f m\n', 2*rt);
+    fprintf('de                      : %.6f m\n', 2*re);
+    fprintf('dcc                     : %.6f m\n', 2*rcc);
 
     fprintf('\n');
     fprintf('------------- Lengths ---------------\n');
-    fprintf('Lconv                   : %.6f m\n', noz.Lconv);
-    fprintf('Ldiv_conical            : %.6f m\n', noz.Ldiv_conical);
-    fprintf('Ldiv                    : %.6f m\n', noz.Ldiv);
-    fprintf('Ltotal_nozzle           : %.6f m\n', noz.Ltotal_nozzle);
-
-    if strcmpi(noz.type, 'bell')
-        fprintf('Lbell                   : %.6f m\n', noz.Lbell);
-        fprintf('Bell fraction           : %.4f [-]\n', noz.bellFrac);
-    end
+    fprintf('Lconv                   : %.6f m\n', lConv);
+    fprintf('Ldiv_conical            : %.6f m\n', lDiv);
+    fprintf('Ldiv                    : %.6f m\n', lDiv);
+    fprintf('Ltotal_nozzle           : %.6f m\n', lTotal);
 
     fprintf('\n');
     fprintf('-------------- Angles ----------------\n');
-    fprintf('alpha                   : %.3f deg\n', noz.alpha_deg);
-    fprintf('beta                    : %.3f deg\n', noz.beta_deg);
-
-    if ~isnan(noz.Mcc)
-        fprintf('Mcc                     : %.4f [-]\n', noz.Mcc);
-    else
-        fprintf('Mcc                     : imposed through rcc\n');
-    end
+    fprintf('alpha                   : %.3f deg\n', alpha_deg);
+    fprintf('beta                    : %.3f deg\n', beta_deg);
+    fprintf('machCC                     : %.4f [-]\n', machCC);
 
     fprintf('====================================================\n');
     fprintf('\n');
-
 end
 end
