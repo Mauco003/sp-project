@@ -73,19 +73,19 @@ rConv = linspace(rcc, rt, 100);
 xDiv = linspace(0, lDiv, 150);
 rDiv = linspace(rt, re, 150);
 
-xProfile = [xConv, xDiv];
-rProfile = [rConv, rDiv];
+x = [xConv, xDiv];
+r = [rConv, rDiv];
 
 % Exporting data
-nozzle.xProfile = [0, lConv, lTotal];
-nozzle.rProfile = [rcc, rt, re];
+nozzle.x = [0, lConv, lTotal];
+nozzle.r = [rcc, rt, re];
 
 nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
 
 nozzle.ve    = ve;
-nozzle.cstar = cstar;
+% nozzle.cstar = cstar;
 nozzle.Isp   = Isp;
 nozzle.mDot  = mdot;
 nozzle.cf    = cf;
@@ -94,8 +94,8 @@ nozzle.machCC = machCC;
 % Plot
 if options.plot
     figure;
-    plot(xProfile,  rProfile, 'LineWidth', 1.5); hold on;
-    plot(xProfile, -rProfile, 'LineWidth', 1.5);
+    plot(x,  r, 'LineWidth', 1.5); hold on;
+    plot(x, -r, 'LineWidth', 1.5);
     axis equal;
     grid on;
     xlabel('x [m]');

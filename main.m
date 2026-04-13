@@ -14,14 +14,8 @@ burningRateData = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
 
 [a, aSigma, n, nSigma, R2] = Uncertainty(pressureData, burningRateData);
 
+% Chosen OX / FUEL: 74% AP 26% HTPB (from characterization for given burn rate)
+
 
 
 %%
-term1 = (2 * gamma^2) / (gamma - 1);
-term2 = (2 / (gamma + 1))^((gamma + 1) / (gamma - 1));
-term3 = 1 - (Pa / Pc)^((gamma - 1) / gamma);
-
-Ct = sqrt(term1 * term2 * term3); % Thrust Coeff.
-Pc_pa = Pc * 1e5; % Need Pascal for At    
-At = T / (Pc_pa * Ct);
-
