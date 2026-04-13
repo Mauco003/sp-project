@@ -16,6 +16,7 @@ burningRateData = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
 
 % Chosen OX / FUEL: 74% AP 26% HTPB (from characterization for given burn rate)
 
-
+noz = nozzleDesign(100*1e3, 2342.92, 70*1e5, 101325, 1.2386, 22.087);
+mDot = 100*1e3 / ()
 
 %%

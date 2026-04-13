@@ -1,4 +1,4 @@
-function nozzle = nozzleDesign(thrust, tc, pc, pe, gamma, constants, options)
+function nozzle = nozzleDesign(thrust, tc, pc, pe, gamma, molarMass, constants, options)
 %NOZZLEDESIGN Preliminary nozzle geometry model
 %
 arguments
@@ -7,6 +7,7 @@ arguments
     pc
     pe
     gamma
+    molarMass
     constants   Constants = Constants()
     options.alpha = 15 * pi/180
     options.beta  = 30 * pi/180
@@ -29,7 +30,7 @@ beta = options.beta;
 machCC = options.machCC;
 
 g0    = constants.g0;
-R     = constants.R;
+R     = constants.R / molarMass;
 
 % Ideal thermodynamic performance
 ve    = exhaustVelocityIdeal(gamma, R, tc, pe, pc);
@@ -89,6 +90,7 @@ nozzle.ve    = ve;
 nozzle.Isp   = Isp;
 nozzle.mDot  = mdot;
 nozzle.cf    = cf;
+nozzle.cstar = cstar;
 nozzle.machCC = machCC;
 
 % Plot

@@ -237,8 +237,6 @@ function [t, p, rb] = balisticPredict(a, n, rhoP, cStar, diamExt, diamInt, h, At
     SRM.Athroat = Athroat;
     SRM.n = n;
 
-
-
     options = odeset("Events", @(t, x) eventFunc(t, x, rExt), "RelTol", 1e-9, "AbsTol", 1e-10);
 
     [t, x] = ode45(@(t, x) burnODE(t, x, SRM), [0, inf], x0, options);
