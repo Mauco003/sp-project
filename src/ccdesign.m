@@ -44,3 +44,5 @@ d_e = 298.45; % mm
 L_0 = 1/2 * (3*d_e + d_i); % from Richard Nakka (mm)
 
 % d_p = A_b/(pi * L_0*1e-3)
+
+[t, p, rb] = computeBurn(a, n, rho_p*1e-6, nozzle.cstar, d_e, d_i, L_0, nozzle.At*1e6);
