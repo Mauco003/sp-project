@@ -9,20 +9,20 @@ T_c = 2342.92; % kelvin
 gamma = 1.2386;
 a = 1.6177;
 n = 0.3816;
-rho_ap = 1950;
-rho_hptb = 913;
-M_M = 22.087;
+rho_ap = 1950; % kg/m3
+rho_hptb = 913; %  kg/m3
+M_M = 22.087; 
 rho_p = 1/(0.8/rho_ap +  0.2/rho_hptb); % 1859 kg/m3
 
-I_tot = 2.5*1e6;
-T = 100*1e3;
-t_b = I_tot/T;
+I_tot = 2.5*1e6; % N*s
+T = 100*1e3; % N
+t_b = I_tot/T; % s
 
 p_ext = 101325; % Pa
 
 nozzle = nozzleDesign(T, T_c, p_c, p_ext, gamma, M_M);
 
-m_prop = nozzle.mDot * t_b;
+m_prop = nozzle.mDot * t_b; % kg
 
 % Pressure [bar]
 pressureData = [10.1; 9.7; 10.3; 30.2; 31.0; 29.8; 50.2; 51.0; ...
@@ -34,15 +34,23 @@ burningRateData = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
 
 [a, aSigma, n, nSigma, R2] = Uncertainty(pressureData, burningRateData);
 
-r_b = a * (p_c*1e-5)^n;
+r_b = a * (p_c*1e-5)^n; % mm/s/bar^n
 
-A_b = nozzle.mDot / (rho_p * r_b*1e-3);
+A_b = nozzle.mDot / (rho_p * r_b*1e-3); % m^2
 
-d_i = 203.2; % mm
-d_e = 298.45; % mm
+% d_e = 298.45; % mm
 
-L_0 = 1/2 * (3*d_e + d_i); % from Richard Nakka (mm)
+web = r_b*1e-3 * t_b; % m
+
+% L_0 = 1/2 * (3*d_e + d_i); % from Richard Nakka (mm)
 
 % d_p = A_b/(pi * L_0*1e-3)
 
-[t, p, rb] = computeBurn(a, n, rho_p*1e-6, nozzle.cstar, d_e, d_i, L_0, nozzle.At*1e6);
+V_prop = m_prop/rho_p; % m^3
+
+d_i = internaldiameter(V_prop, web); % m
+[d_e, L0] = grainconfiguration(d_i, web); % m
+
+
+[t, p, rb] = computeBurn(a, n, rho_p*1e-6, nozzle.cstar, d_e, d_i, L0, nozzle.At*1e6);
+
