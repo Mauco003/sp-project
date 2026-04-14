@@ -44,6 +44,9 @@ _external_data/
 codegen/
 derived_data/
 
+# --- IDEs and Editors ---
+.vscode/
+
 # --- General ---
 .DS_Store
 Thumbs.db
