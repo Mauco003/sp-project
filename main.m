@@ -20,36 +20,45 @@ constants = Constants();
 thrust = 100000;                                                            % [N]
 totalImpulse = 2.5e6;                                                       % [N s]
 burningTime = totalImpulse/thrust;                                          % [s]
-pc = 70e5;                                                                  % [Pa]
-pe = constants.pAmb;                                                        % [Pa] (nozzle optimal at sea level)
+pcNominal = 70e5;                                                                  % [Pa]
+peNominal = constants.pAmb;                                                        % [Pa] (nozzle optimal at sea level)
 
 % Area ratios (wrt At) from which to which there is active cooling
 coolARatios = [2, 2];                                            
 
+
+%% Ballistic characterization
 % Vieille's law
 [a, aSigma, n, nSigma, R2] = uncertaintyVieille(data.ccPressure, data.burnRate);
 
+rbNominal = a*pcNominal^n;                                                         % Burning rate with nominal chamber pressure [mm/s]
+
+
+%% Ideal thermodynamics & mass sizing
+[performanceNom, AtIdeal, AeIdeal] = idealPerformance(thrust, data.cea.ccTemperature, pcNominal, peNominal, data.cea.gamma, data.cea.molarMass, constants);
+
+mPTot = performanceNom.mDot*burningTime;                                          % Total propellant mass [kg]
+
+
+%% BATES motor desing
+% Grain sizing (using Richard Nakka formulation)
+grain = grainConfiguration(rbNominal, burningTime, mPTot, data.cea);
+if plotFlag, plotHollowCylinder(grain); end
+
+
+
+% Nozzle geometry (conical) sizing
+%
+rcc = grain.dExt / 2;                                                       % Chamber radius from grain OD
 
 % Conical nozzleDesign
-[nozzle, propPerf] = nozzleDesign(thrust, data.cea.ccTemperature, pc, pe, data.cea.gamma, data.cea.molarMass, ...
-                                    constants, ...
+nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
                                     "alpha", 15 * pi/180, ...
                                     "beta", 30 * pi/180);
 
-mPTot = propPerf.mDot*burningTime;                                          % Total propellant mass [kg]
 
-rb = a*pc^n;                                                         % Burning rate with nominal chamber pressure [mm/s]
-web = rb*burningTime;
-Vprop = mPTot/data.cea.rhoP;
-
-% BATES motor design (using Richard Nakka formulation)
-% dInt = internalDiameter(Vprop, web*1e-3); % m
-[dInt, dExt, L0] = grainConfiguration(Vprop, web); % m
-
-if plotFlag, plotHollowCylinder(dExt, dInt, L0); end
-
-% Combustion chamber
-[t, p, rb] = computeBurn(a, n, data.cea.rhoP, propPerf.cstar, dExt, dInt, L0, nozzle.At);
-
+%% Combustion chamber / Internal Ballistics (Real Performance)
+[thrust_real, Isp_real, mDot_real] = computePerformance(a, n, ...
+    data, performanceNom, nozzle, grain, constants);
 
 

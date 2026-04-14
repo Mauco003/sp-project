@@ -1,4 +1,4 @@
-function plotHollowCylinder(dExt, dInt, L0)
+function plotHollowCylinder(grain)
     % plotHollowCylinder Plots a 3D hollow cylinder with light memory usage.
     
     % Define the number of points for the circle
@@ -6,29 +6,29 @@ function plotHollowCylinder(dExt, dInt, L0)
     theta = linspace(0, 2*pi, numPoints);
     
     % Calculate radii
-    rExt = dExt / 2;
-    rInt = dInt / 2;
+    rExt = grain.dExt / 2;
+    rInt = grain.dInt / 2;
     
     % Matrices for the Outer Cylinder
     xOut = rExt * cos(theta);
     yOut = rExt * sin(theta);
     xOutSurf = [xOut; xOut];
     yOutSurf = [yOut; yOut];
-    zOutSurf = [0; L0] * ones(1, numPoints);
+    zOutSurf = [0; grain.L0] * ones(1, numPoints);
     
     % Matrices for the Inner Cylinder
     xInt = rInt * cos(theta);
     yInt = rInt * sin(theta);
     xIntSurf = [xInt; xInt];
     yIntSurf = [yInt; yInt];
-    zIntSurf = [0; L0] * ones(1, numPoints);
+    zIntSurf = [0; grain.L0] * ones(1, numPoints);
     
     % Matrices for the top and bottom caps (Annulus)
     rArray = [rInt; rExt];
     xCap = rArray * cos(theta);
     yCap = rArray * sin(theta);
     zCapBottom = zeros(2, numPoints);
-    zCapTop = L0 * ones(2, numPoints);
+    zCapTop = grain.L0 * ones(2, numPoints);
     
     % Plotting
     currentHoldState = ishold;

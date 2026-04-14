@@ -1,17 +1,16 @@
-function [t, p, rb] = computeBurn(a, n, rhoP, cStar, diamExt, diamInt, h, Athroat)
+function [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat)
     % 
     % a [m/s*(Pa^n)]
     % n [-] (but related to a vieille's law with rb [m/s] and P [Pa])
     % rhoP
     % cStar [m/s]
-    % diamExt [m]
-    % diamInt [m]
-    % h [m]
+    % grain
     % Athroat [m^2]
-    rExt = diamExt/2;
-    rInt0 = diamInt/2;
 
-    x0 = [rInt0; h];
+    rExt = grain.diamExt/2;
+    rInt0 = grain.diamInt/2;
+
+    x0 = [rInt0; grain.L0];
 
     SRM.a = a;
     SRM.rhoP = rhoP;
@@ -24,8 +23,8 @@ function [t, p, rb] = computeBurn(a, n, rhoP, cStar, diamExt, diamInt, h, Athroa
 
     [t, x] = ode45(@(t, x) burnODE(t, x, SRM), [0, inf], x0, options);
     rInt = x(:, 1)';
-    h = x(:, 2)';
-    Ab = 2*pi*(rExt^2-rInt.^2)+2*pi*h.*rInt;
+    grain.L0 = x(:, 2)';
+    Ab = 2*pi*(rExt^2-rInt.^2)+2*pi*grain.L0.*rInt;
     p = (a.*rhoP.*cStar.*Ab./Athroat).^(1./(1-n));
     rb = a.*(p.^n);
 end

@@ -1,19 +1,13 @@
-function [nozzle, propPerf] = nozzleDesign(thrust, tc, pc, pe, gamma, molarMass, constants, options)
-%NOZZLEDESIGN Preliminary nozzle geometry model
+function nozzle = nozzleDesign(At, Ae, rcc, options)
+%NOZZLEDESIGN Computes axisymmetric conical nozzle geometry
 %
 arguments
-    thrust
-    tc
-    pc
-    pe
-    gamma
-    molarMass
-    constants   Constants = Constants()
+    At
+    Ae
+    rcc
     options.alpha = 15 * pi/180
     options.beta  = 30 * pi/180
     options.lambdaDiv = []
-    options.machCC = 0.2
-    options.ccRadius = []
     options.plot = false
     options.showSummary = false
 end
@@ -27,41 +21,17 @@ else
 end
 
 beta = options.beta;
-machCC = options.machCC;
-
-g0    = constants.g0;
-R     = constants.R / molarMass;
-
-% Ideal thermodynamic performance
-ve    = exhaustVelocityIdeal(gamma, R, tc, pe, pc);
-cstar = cstarIdeal(R, tc, gamma);
-Isp   = ve / g0;
-mdot  = thrust/(Isp*g0);
-
-% Throat and exit areas
-cf = cfIdeal(gamma, pe, pc);
-
-At = thrust / (pc * cf);
-epsilon = computeEpsilon(gamma, pe, pc);
-Ae = epsilon * At;
 
 rt = sqrt(At/pi);
 re = sqrt(Ae/pi);
 
+% Chamber area
+Acc = pi * rcc^2;
+
 % Conical divergence length
 lDiv = (re - rt) / tan(alpha);
 
-% Chamber section from machCC if r_cc is not given
-if ~isempty(options.ccRadius)
-    rcc = ccRadius;
-    Acc = pi * rcc^2;
-    machCC = machFromAreaRatio(Acc/At, gamma, 'subsonic');   % not used because r_cc was directly imposed
-else
-    Acc = At * areaRatioIsen(machCC, gamma);
-    rcc = sqrt(Acc/pi);
-end
-
-% Convergent section
+% Convergent section length
 lConv = (rcc - rt) / tan(beta);
 
 % Geometry by nozzle type
@@ -85,13 +55,6 @@ nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
 
-propPerf.ve    = ve;
-propPerf.cstar = cstar;
-propPerf.Isp   = Isp;
-propPerf.mDot  = mdot;
-propPerf.cf    = cf;
-propPerf.machCC = machCC;
-
 % Plot
 if options.plot
     figure;
@@ -108,22 +71,10 @@ end
 if options.showSummary
     fprintf('\n');
     fprintf('====================================================\n');
-    fprintf('              PERFORMANCE MODEL SUMMARY             \n');
-    fprintf('====================================================\n');
-    fprintf('ve (ideal)              : %.6f m/s\n', ve);
-    fprintf('c* (ideal)              : %.6f m/s\n', cstar);
-    fprintf('Isp (ideal)             : %.6f s\n', Isp);
-    fprintf('mdot (ideal)             : %.6f kg/s\n', mdot);
-    fprintf('====================================================\n');
-    fprintf('\n');
-
-    fprintf('====================================================\n');
     fprintf('                 NOZZLE DESIGN SUMMARY              \n');
     fprintf('====================================================\n');
 
-    fprintf('Type                    : %s\n', type);
-    fprintf('CT                      : %.4f [-]\n', CT);
-    fprintf('Epsilon                 : %.4f [-]\n', eps);
+    fprintf('Epsilon                 : %.4f [-]\n', Ae/At);
     fprintf('Lambda                  : %.4f [-]\n', lambdaDiv);
 
     fprintf('\n');
@@ -147,17 +98,14 @@ if options.showSummary
     fprintf('\n');
     fprintf('------------- Lengths ---------------\n');
     fprintf('Lconv                   : %.6f m\n', lConv);
-    fprintf('Ldiv_conical            : %.6f m\n', lDiv);
     fprintf('Ldiv                    : %.6f m\n', lDiv);
     fprintf('Ltotal_nozzle           : %.6f m\n', lTotal);
 
     fprintf('\n');
     fprintf('-------------- Angles ----------------\n');
-    fprintf('alpha                   : %.3f deg\n', alpha_deg);
-    fprintf('beta                    : %.3f deg\n', beta_deg);
-    fprintf('machCC                     : %.4f [-]\n', machCC);
-
-    fprintf('====================================================\n');
-    fprintf('\n');
+    fprintf('alpha                   : %.3f deg\n', alpha * 180/pi);
+    fprintf('beta                    : %.3f deg\n', beta * 180/pi);
+    fprintf('====================================================\n\n');
 end
+
 end

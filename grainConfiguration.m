@@ -1,7 +1,19 @@
-function [dInt, dExt, L0] = grainConfiguration(Vprop, web)
+function grain = grainConfiguration(rbNominal, burningTime, mPTot, cea)
 
-f = @(dInt) pi/8 * (3*(dInt + 2*web)^3 - 3*dInt^2*(dInt + 2*web) + dInt*(dInt + 2*web)^2 - dInt^3) - Vprop;
-dInt = fzero(f, web);
+    web = rbNominal*burningTime;
+    Vprop = mPTot/cea.rhoP;
 
-dExt = dInt + 2*web;
-L0 = 1/2 * (3*dExt + dInt);
+    f = @(dInt) pi/8 * (3*(dInt + 2*web)^3 - 3*dInt^2*(dInt + 2*web) + dInt*(dInt + 2*web)^2 - dInt^3) - Vprop;
+    dInt = fzero(f, web);
+
+    dExt = dInt + 2*web;
+    L0 = 1/2 * (3*dExt + dInt);
+
+
+
+    grain.Vprop = Vprop;
+    grain.web = web;
+    grain.dInt = dInt;
+    grain.dExt = dExt;
+    grain.L0 = L0;
+end
