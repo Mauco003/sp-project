@@ -44,10 +44,12 @@ Vprop = mPTot/data.cea.rhoP;
 
 % BATES motor design (using Richard Nakka formulation)
 % dInt = internalDiameter(Vprop, web*1e-3); % m
-[dExt, L0] = grainConfiguration(Vprop, web); % m
+[dInt, dExt, L0] = grainConfiguration(Vprop, web); % m
 
 if plotFlag, plotHollowCylinder(dExt, dInt, L0); end
 
 % Combustion chamber
-% [t, p, rb] = computeBurn(a, n, data.cea.rhoP*1e-6, propPerf.cstar, dExt, dInt, L0, nozzle.At*1e6);
+[t, p, rb] = computeBurn(a, n, data.cea.rhoP, propPerf.cstar, dExt, dInt, L0, nozzle.At);
+
+
 

@@ -1,7 +1,7 @@
 function [t, p, rb] = computeBurn(a, n, rhoP, cStar, diamExt, diamInt, h, Athroat)
     % 
-    % a [mm/s*(bar^n)]
-    % n [-] (but related to a vieille's law with rb [mm/s] and P [bar])
+    % a [m/s*(Pa^n)]
+    % n [-] (but related to a vieille's law with rb [m/s] and P [Pa])
     % rhoP
     % cStar [m/s]
     % diamExt [m]
