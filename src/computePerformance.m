@@ -49,6 +49,7 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
 
     ve = cstar .* cfMom;
     
+    performance.t = t;
     performance.thrust = thrust;
     performance.Isp = Isp;
     performance.mDot = mDot;
@@ -58,6 +59,7 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
     performance.Mcc = Mcc;
     performance.Me = Me;
     performance.rb = rb;
+    performance.cstar = performanceNom.cstar;
     
     grain.dInt = 2*rInt;
     grain.Ab = Ab;

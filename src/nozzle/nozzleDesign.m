@@ -56,6 +56,12 @@ nozzle.At = At;
 nozzle.Ae = Ae;
 nozzle.epsilon = Ae/At;
 
+nozzle.alpha = options.alpha;
+nozzle.beta  = options.beta;
+
+nozzle.lConv = lConv;
+nozzle.lDiv  = lDiv;
+
 % Plot
 if options.plot
     figure;

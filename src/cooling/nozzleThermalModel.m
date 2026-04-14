@@ -1,10 +1,12 @@
-function best = nozzleThermalModel(thermo, nozzle, cooling, options)
+function best = nozzleThermalModel(data, performance, nozzle, cooling, constants, options)
 %NOZZLETHERMALMODEL
 % Thermal model with:
 %   - gas-side Bartz correlation
 %   - one single conductive wall
 %   - equivalent annular cooling jacket
 %   - iterative search for minimum wall thickness and minimum water mass flow
+%
+% Conical nozzle is assumed
 %
 % Main idea:
 %   q'' = (Taw - Twater_bulk) / (1/hg + t/k + 1/hWater)
@@ -41,57 +43,57 @@ function best = nozzleThermalModel(thermo, nozzle, cooling, options)
 %   options.showSummary
 
 arguments
-    thermo struct
-    nozzle struct
+    data  struct
+    performance struct
+    nozzle  struct
     cooling struct
-    options.Npts (1,1) double = 10
-    options.AA_limit (1,1) double = 2
-    options.t_start (1,1) double = 1e-3      % 1 mm
-    options.t_step  (1,1) double = 0.25e-3   % 0.25 mm
-    options.t_max   (1,1) double = 20e-3
-    options.mdotTol (1,1) double = 1e-4
-    options.makePlot (1,1) logical = true
+    constants struct
+    options.n           (1,1) double  = 10        % [-] Number of points for each section (converging section), total points = 2n - 1
+    options.areaLimits  (2,1) double  = [2; 2]    % The jacket goes from A(1) to A(2)
+    options.t_start     (1,1) double  = 1e-3      % 1 mm
+    options.t_step      (1,1) double  = 0.25e-3   % 0.25 mm
+    options.t_max       (1,1) double  = 20e-3
+    options.mdotTol     (1,1) double  = 1e-4
+    options.makePlot    (1,1) logical = true
     options.showSummary (1,1) logical = true
 end
 
 %% ------------------------------------------------------------------------
 % Fixed water properties (first version)
 % -------------------------------------------------------------------------
-cpWater  = 4180;        % [J/kg/K]
-rhoWater = 997;         % [kg/m^3]
-muWater  = 0.89e-3;     % [Pa*s]
-kWater   = 0.60;        % [W/m/K]
-PrWater  = cpWater * muWater / kWater; % Prandtl number
+% cooling.cp  = 4180;                                 % [J/kg/K]
+% cooling.rho = 997;                                  % [kg/m^3]
+% cooling.mu  = 0.89e-3;                              % [Pa*s]
+% cooling.k   = 0.60;                                 % [W/m/K]
+% cooling.Pr  = cooling.cp * cooling.mu / cooling.k;  % Prandtl number
+
+TwaterInitial = cooling.inletTemperature;
+kNozzleWall   = cooling.kWall;
+pWater        = cooling.pressure;
+uWaterTarget  = cooling.velocity;
 
 % inputs from previous work. I put structs bc there is way too many
 
 % chemical
+R = constants.R / data.cea.molarMass;
 
-gamma = thermo.gamma;
-Tc    = thermo.Tc;
-pc    = thermo.pc;
-cStar = thermo.cstar;
-muGas = thermo.mu_gas;
-cpGas = thermo.cp_gas;
-PrGas = thermo.Pr_gas;
+gamma = data.cea.gamma;
+Tc    = data.cea.ccTemperature;
+pc    = data.ccPressure;
+cStar = performance.cstar;
+muGas = data.cea.mu;
+cpGas = R * gamma/(gamma-1);
+PrGas = muGas*cpGas / data.cea.k;
 
 % nozzle
-
 At    = nozzle.At;
 alpha = nozzle.alpha;     % [rad]
 beta  = nozzle.beta;      % [rad]
-burnTime = nozzle.burnTime;
-
-% Cooling jacket related
-TwaterInitial = cooling.Twater_in;
-kNozzleWall   = cooling.k_wall;
-pWater        = cooling.pWater;
-uWaterTarget  = cooling.uWaterTarget;
+% burnTime = performance.t; % [s]
 
 % Mesh for IT transfer
-
-Npts = options.Npts;
-areaRatioCool = options.AA_limit;
+n = options.n;
+areaRatioCool = options.areaLimits;
 
 % Geometry of cooling jacket
 % FIXED from At, alpha, beta and the desired area ratio
@@ -99,54 +101,46 @@ areaRatioCool = options.AA_limit;
 rt = sqrt(At/pi);
 rLim = sqrt(areaRatioCool*At/pi);
 
-Lconv = (rLim - rt)/tan(beta);
-Ldiv  = (rLim - rt)/tan(alpha);
+Lconv = (rLim(1) - rt)/tan(beta);
+Ldiv  = (rLim(2) - rt)/tan(alpha);
 
-x = linspace(-Lconv, Ldiv, Npts).';
+xConv = linspace(-Lconv, 0, n)';
+xDiv  = linspace(0, Ldiv, n)';
+
+x = [xConv; xDiv(2:end)];
 r = zeros(size(x));
 
-for i = 1:Npts
-    if x(i) <= 0
-        r(i) = rt - x(i)*tan(beta);
-    else
-        r(i) = rt + x(i)*tan(alpha);
-    end
-end
+r(x <= 0) = rt - x(x <= 0)*tan(beta);
+r(x > 0) = rt + x(x > 0)*tan(alpha);
+
 
 % cross sectional area and Area ratio of each point of the mesh. Used to
 % evaluate isentropic relationships
-
 A = pi*r.^2;
-AA = A/At;
+epsilon = A/At;
 
 % Hot flow quantities along the mesh. Initialized
-
-M        = zeros(Npts,1);
-T_static = zeros(Npts,1);
-Taw      = zeros(Npts,1); % Adiabatic wall temperature
-hg       = zeros(Npts,1); % COnvective coefficient for the core flow CHANGES
+mach        = zeros(2*n-1,1);
+T0          = zeros(2*n-1,1);
+Taw         = zeros(2*n-1,1); % Adiabatic wall temperature
+hg          = zeros(2*n-1,1); % Convective coefficient for the core flow
 
 % Get the Mach number based on area ratio at each point of the mesh
+mach(n) = 1;
 
-for i = 1:Npts
-    if abs(AA(i)-1) < 1e-8
-        M(i) = 1.0;
-    elseif x(i) < 0
-        M(i) = machFromAreaRatio(AA(i), gamma, 'subsonic');
-    else
-        M(i) = machFromAreaRatio(AA(i), gamma, 'supersonic');
-    end
-    
-    % Get temperature based on isentropic relationships
-
-    T_static(i) = Tc * T_T0_Isen(M(i), gamma);
-    Taw(i) = adiabaticWallTemperature(T_static(i), M(i), gamma, PrGas, thermo.recoveryModel);
-
-    % Bartz correlation used for h
-    Tw_ref = 1500;   % only for sigma correction? Sutton stuff
-    hg(i) = bartzCorrelation(pc, cStar, 2*rt, A(i), At, ...
-                             muGas, cpGas, PrGas, gamma, M(i), Tc, Tw_ref);
+for i = 1:n-1, mach(i) = machFromAreaRatio(epsilon(i), gamma, 'subsonic');
 end
+
+for i = (n+1):(2*n-1), mach(i) = machFromAreaRatio(epsilon(i), gamma, 'supersonic');
+end
+
+T0(i) = Tc * (1 + 0.5*(gamma-1)*mach); % !TODO: Fix relation since this is sus
+Taw(i) = adiabaticWallTemperature(T0(i), mach(i), gamma, PrGas, thermo.recoveryModel);
+
+% Bartz correlation used for h
+Tw_ref = 1500;   % only for sigma correction? Sutton stuff
+hg(i) = bartzCorrelation(pc, cStar, 2*rt, A(i), At, ...
+                         muGas, cpGas, PrGas, gamma, mach(i), Tc, Tw_ref);
 
 % Boiling temperature from water pressure
 
@@ -193,7 +187,7 @@ if options.makePlot
     figure;
 
     subplot(2,2,1)
-    plot(x, T_static, 'LineWidth', 1.5); hold on
+    plot(x, T0, 'LineWidth', 1.5); hold on
     plot(x, Taw, 'LineWidth', 1.5);
     plot(x, best.Tw_hot, 'LineWidth', 1.5);
     plot(x, best.Tw_cold, 'LineWidth', 1.5);
@@ -205,7 +199,7 @@ if options.makePlot
     title(sprintf('Thermal profile, t = %.2f mm', 1e3*best.t_wall))
 
     subplot(2,2,2)
-    plot(x, M, 'LineWidth', 1.5)
+    plot(x, mach, 'LineWidth', 1.5)
     grid on
     xlabel('x [m]')
     ylabel('Mach')
@@ -298,7 +292,6 @@ result.Dh = Dh;
 result.Re = Re;
 result.Nu = Nu;
 result.hWater = hWater;
-
 end
 
 
@@ -318,5 +311,4 @@ C = 244.485;
 
 T_C = B / (A - log10(p_mmHg)) - C;
 Tsat = T_C + 273.15;
-
 end
