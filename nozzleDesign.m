@@ -1,4 +1,4 @@
-function nozzle = nozzleDesign(thrust, tc, pc, pe, gamma, molarMass, constants, options)
+function [nozzle, propPerf] = nozzleDesign(thrust, tc, pc, pe, gamma, molarMass, constants, options)
 %NOZZLEDESIGN Preliminary nozzle geometry model
 %
 arguments
@@ -85,13 +85,12 @@ nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
 
-nozzle.ve    = ve;
-% nozzle.cstar = cstar;
-nozzle.Isp   = Isp;
-nozzle.mDot  = mdot;
-nozzle.cf    = cf;
-nozzle.cstar = cstar;
-nozzle.machCC = machCC;
+propPerf.ve    = ve;
+propPerf.cstar = cstar;
+propPerf.Isp   = Isp;
+propPerf.mDot  = mdot;
+propPerf.cf    = cf;
+propPerf.machCC = machCC;
 
 % Plot
 if options.plot

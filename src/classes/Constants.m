@@ -3,8 +3,9 @@ classdef Constants
     %   Detailed explanation goes here
     
     properties (Constant)
-        g0 = 9.81    % [m/s^2]  Gravity constant
-        R  = 8314.29 % [J/kg/K] Universal gas constant
+        g0 = 9.81                                                           % Gravity constant [m/s^2]
+        R  = 8314.29                                                        % Universal gas constant [J/kg/K]
+        pAmb = 101325                                                       % Ambient pressure at sea level [Pa]
     end
 end
 
