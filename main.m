@@ -44,7 +44,7 @@ Vprop = mPTot/data.cea.rhoP;
 
 % BATES motor design (using Richard Nakka formulation)
 % dInt = internalDiameter(Vprop, web*1e-3); % m
-[dExt, L0] = grainConfiguration(Vprop, web*1e-3); % m
+[dExt, L0] = grainConfiguration(Vprop, web); % m
 
 if plotFlag, plotHollowCylinder(dExt, dInt, L0); end
 
