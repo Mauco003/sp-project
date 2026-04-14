@@ -49,7 +49,7 @@ if plotFlag, plotHollowCylinder(grain); end
 
 % Nozzle geometry (conical) sizing
 %
-rcc = grain.dExt / 2;                                                       % Chamber radius from grain OD
+rcc = grain.dExt0 / 2;                                                       % Chamber radius from grain OD
 
 % Conical nozzleDesign
 nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
@@ -58,7 +58,7 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
 
 
 %% Combustion chamber / Internal Ballistics (Real Performance)
-[thrust_real, Isp_real, mDot_real] = computePerformance(a, n, ...
+[t, performance, grain] = computePerformance(a, n, ...
     data, performanceNom, nozzle, grain, constants);
 
 

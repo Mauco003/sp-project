@@ -6,8 +6,8 @@ function plotHollowCylinder(grain)
     theta = linspace(0, 2*pi, numPoints);
     
     % Calculate radii
-    rExt = grain.dExt / 2;
-    rInt = grain.dInt / 2;
+    rExt = grain.dExt0 / 2;
+    rInt = grain.dInt0 / 2;
     
     % Matrices for the Outer Cylinder
     xOut = rExt * cos(theta);

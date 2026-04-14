@@ -7,8 +7,8 @@ function [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat)
     % grain
     % Athroat [m^2]
 
-    rExt = grain.diamExt/2;
-    rInt0 = grain.diamInt/2;
+    rExt = grain.dExt0/2;
+    rInt0 = grain.dInt0/2;
 
     x0 = [rInt0; grain.L0];
 

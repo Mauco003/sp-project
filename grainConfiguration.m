@@ -13,7 +13,7 @@ function grain = grainConfiguration(rbNominal, burningTime, mPTot, cea)
 
     grain.Vprop = Vprop;
     grain.web = web;
-    grain.dInt = dInt;
-    grain.dExt = dExt;
+    grain.dInt0 = dInt;
+    grain.dExt0 = dExt;
     grain.L0 = L0;
 end
