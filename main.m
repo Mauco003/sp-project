@@ -1,3 +1,10 @@
+%% TODO
+% - computePerformance: add isoentropic efficiency
+% - montecarlo: integrate in the rest of the toolkit and bufix
+% - cooling jacket: implement CEA data inside computation
+%
+% - dimensioning of the cooling jacket
+
 %% Setup
 clear; close all; clc
 
