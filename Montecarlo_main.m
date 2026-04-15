@@ -129,7 +129,7 @@ for index = 1:mcmax
 
     MOx = OFMc/(1 + OFMc);
     MF  = 1/(1 + OFMc);
-    dataMC.rhoP = 1/(MOx/data.cea.rhoAP + MF/data.cea.rhoHTPB);
+    dataMC.cea.rhoP = 1/(MOx/data.cea.rhoAP + MF/data.cea.rhoHTPB);
 
     constantsMC.pAmb = pambMc;
     nozzleMC.At = AtMc;
