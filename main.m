@@ -3,10 +3,10 @@ clear; close all; clc
 
 addpath(genpath("./src"))
 
-plotFlag = true;
+plotFlag = false;
 
 propellant = propellantConfig();
-cooling = coolingConfig();
+cooling = coolingConfig(propellant);
 
 %% Configuraiton Data
 % Generic constants

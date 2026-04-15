@@ -94,6 +94,7 @@ beta  = nozzle.beta;      % [rad]
 
 % Mesh for IT transfer
 n = options.n;
+N = 2*n - 1; % Total number of points in mesh
 areaRatioCool = options.areaLimits;
 
 % Geometry of cooling jacket
@@ -120,15 +121,16 @@ epsilon = A/At;
 
 % Hot flow quantities along the mesh. Initialized
 % Get the Mach number based on area ratio at each point of the mesh
-mach        = zeros(2*n-1,1);
+mach        = zeros(N,1);
 mach(n) = 1;
 for i = 1:n-1,         mach(i) = machFromAreaRatio(epsilon(i), gamma, 'subsonic');   end
-for i = (n+1):(2*n-1), mach(i) = machFromAreaRatio(epsilon(i), gamma, 'supersonic'); end
+for i = (n+1):(N), mach(i) = machFromAreaRatio(epsilon(i), gamma, 'supersonic'); end
 
 T0 = Tc * (1 + 0.5*(gamma-1)*performance.Mcc^2); % Under adiabatic conditions, T0 is constant
 
 % Bartz correlation used for h
-Twall = 1500;   % only for sigma correction? Sutton stuff
+% Twall = 1500;   % only for sigma correction? Sutton stuff
+mDot  = 1;      % [kg/s] coolant mass flow rate
 
 % Computing heat flux
 % Data i need:
@@ -136,27 +138,24 @@ Twall = 1500;   % only for sigma correction? Sutton stuff
 %   T, adiabatic
 
 % Table of temperature along mesh for each cooling point
-T = zeros(2*n, length(cooling) + 1);
-dx = zeros(2*n-1,2); % Thickness of each wall section
-q  = zeros(2*n-1,1); % Heat flux at each station
+T = zeros(N, length(cooling) + 1);
+dx = zeros(N,2);   % Thickness of each wall section
+q  = zeros(N-1,1); % Heat flux at each section
 
-q(1) = 0; % Initial guess for heat flux at inlet, then it is updated iteratively
-
-T(1, 1) = T0*recoveryFactor(gamma, performance.Mcc, PrGas); % Adiabatic wall temperature at inlet
-T(2, end-1) = nan; % Setting to nan, since this is only initial conditions, not cooling jacket
+% T(1, 1) = T0*recoveryFactor(gamma, performance.Mcc, PrGas); % Adiabatic wall temperature at inlet
+% T(1, 2:end-1) = nan; % Setting to nan, since this is only initial conditions, not cooling jacket
 T(1, end) = cooling(end).temperature; % Initial guess for water temperature at inlet
 
 % Surface area of each segment of the mesh, used for heat flux calculation
-dA = 2*pi*(sqrt(diff(x).^2 + diff(r).^2)) .* 0.5*(r(1:end-1) + r(2:end));
+dA = 2*pi*(sqrt(diff(x).^2 + diff(r).^2)) .* 0.5 .* (r(1:end-1) + r(2:end));
 
-for i = 2:length(x)  
+for i = 1:N-1
     T(i, 1) = T0*recoveryFactor(gamma, mach(i), PrGas); % Adiabatic wall temperature at station i
-    T(i, end) = T(i-1, end) + q(i-1)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
 
-    h1 = bartzCorrelation(pc, cstar, 2*rt, nozzle.rCurvature, epsilon, mu, cp, Pr);
+    h1 = bartzCorrelation(input.pcNominal, performance.cstar, 2*rt, nozzle.rCurvature, epsilon(i), muGas, cpGas, PrGas);
     k2 = cooling(2).k;
     k3 = cooling(3).k;
-    h4 = dittusCorrelation(Dc,kH2O,Re,Pr);
+    h4 = 4000; %dittusCorrelation(Dc,kH2O,Re,Pr);
 
     H = 1/(1/h1 + dx(i, 1)/k2 + dx(i, 2)/k3 + 1/h4);
 
@@ -166,6 +165,8 @@ for i = 2:length(x)
     T(i, 2) = T(i, 1) - q(i)/h1;
     T(i, 3) = T(i, 2) - q(i)*dx(i, 1)/k2;
     T(i, 4) = T(i, 3) - q(i)*dx(i, 2)/k3;
+
+    T(i+1, end) = T(i, end) + q(i)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
 end
 
 [q] = computeHeatFlux(cooling, x, r);

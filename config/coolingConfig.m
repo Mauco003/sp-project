@@ -54,7 +54,7 @@ cooling(4).mu  = 0.89e-3;
 cooling(4).k   = 0.60;
 cooling(4).Pr  = cooling(4).cp * cooling(4).mu / cooling(4).k;
 cooling(4).dx  = nan;
-cooling(4).temperature = 173.15 + 18;
+cooling(4).temperature = 273.15 + 18;
 cooling(4).pressure = 10*1e5;
 end
 
