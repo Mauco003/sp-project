@@ -1,5 +1,21 @@
-function [t, performance, grain] = computePerformance(a, n, data, performanceNom, nozzle, grain, constants)
+function [t, performance, grain] = computePerformance(a, n, data, performanceNom, nozzle, grain, constants, options)
     
+    arguments
+        a
+        n
+        data
+        performanceNom
+        nozzle
+        grain
+        constants
+        options.alpha = 15*pi/180
+        options.etaF = 0.95
+        options.etaTheta = 0.95
+    end
+
+    lambda = 0.5*(1+cos(options.alpha));
+
+
     [t, pc, rb] = computeBurn(a, n, data.cea.rhoP, performanceNom.cstar, grain, nozzle.At);
 
     y = cumtrapz(t, rb);
@@ -10,12 +26,10 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
 
     Ab = 2*pi*(0.25*grain.dExt0^2 - rInt.^2) + 2*pi*rInt.*L;
     Ab(Ab<0) = 0;
+
     mDot = Ab .* rb * data.cea.rhoP;
-    
-    % thrust = mDot .* performanceNom.cstar;
-    R = constants.R / data.cea.molarMass;
+
     gamma = data.cea.gamma;
-    tc = data.cea.ccTemperature;
 
     Mcc = machFromAreaRatio(nozzle.Acc/nozzle.At, gamma, 'subsonic'); % Computing mach in combustion chamber
     Me = machFromAreaRatio(nozzle.Ae/nozzle.At, gamma, 'supersonic'); % Computing mach at nozzle exit
@@ -24,10 +38,16 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
 
     pe = p0 ./ (1 + 0.5*(gamma-1)*Me.^2).^(gamma/(gamma-1)); % Static pressure in combustion chamber
 
-    ve = exhaustVelocityIdeal(gamma, R, tc, pe, pc);
-    Isp = ve/constants.g0; % Specific impulse
-    thrust = mDot .* ve + (pe - constants.pAmb) * nozzle.Ae; % Thrust
+    cfMomId = cfIdeal(gamma, pe, pc);
+    cfMom = cfMomId .* lambda .* options.etaF;
+    cfStatic = (pe-constants.pAmb)./pc * nozzle.epsilon;
+    cf = cfMom + cfStatic;
 
+    cstar = performanceNom.cstar;
+    thrust = mDot .* cstar .* cf;
+    Isp = (cstar .* cf) ./ constants.g0;
+
+    ve = cstar .* cfMom;
     
     performance.thrust = thrust;
     performance.Isp = Isp;

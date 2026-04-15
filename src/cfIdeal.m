@@ -10,8 +10,8 @@ function cf = cfIdeal(gamma, pe, pc)
 % Output:
 %   CF       - thrust coefficient [-]
 
-term1 = (2*gamma^2/(gamma - 1)) * (2/(gamma + 1))^((gamma + 1)/(gamma - 1));
-term2 = 1 - (pe/pc)^((gamma - 1)/gamma);
-cf = sqrt(term1*term2);
+term1 = (2*gamma.^2./(gamma - 1)) .* (2./(gamma + 1)).^((gamma + 1)./(gamma - 1));
+term2 = 1 - (pe./pc).^((gamma - 1)./gamma);
+cf = sqrt(term1.*term2);
 
 end

@@ -20,7 +20,7 @@ constants = Constants();
 thrust = 100000;                                                            % [N]
 totalImpulse = 2.5e6;                                                       % [N s]
 burningTime = totalImpulse/thrust;                                          % [s]
-pcNominal = 70e5;                                                                  % [Pa]
+pcNominal = 70e5/1.035;                                                                  % [Pa]
 peNominal = constants.pAmb;                                                        % [Pa] (nozzle optimal at sea level)
 
 % Area ratios (wrt At) from which to which there is active cooling
@@ -35,7 +35,7 @@ rbNominal = a*pcNominal^n;                                                      
 
 
 %% Ideal thermodynamics & mass sizing
-[performanceNom, AtIdeal, AeIdeal] = idealPerformance(thrust, data.cea.ccTemperature, pcNominal, peNominal, data.cea.gamma, data.cea.molarMass, constants);
+[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(thrust, data.cea.ccTemperature, pcNominal, peNominal, data.cea.gamma, data.cea.molarMass, constants);
 
 mPTot = performanceNom.mDot*burningTime;                                          % Total propellant mass [kg]
 
@@ -60,5 +60,4 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
 %% Combustion chamber / Internal Ballistics (Real Performance)
 [t, performance, grain] = computePerformance(a, n, ...
     data, performanceNom, nozzle, grain, constants);
-
 

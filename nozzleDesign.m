@@ -54,6 +54,7 @@ nozzle.r = [rcc, rt, re];
 nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
+nozzle.epsilon = Ae/At;
 
 % Plot
 if options.plot
