@@ -62,7 +62,7 @@ rcc = grain.dExt0 / 2;                                                       % C
 % Conical nozzleDesign
 nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
                                     "alpha", 15 * pi/180, ...
-                                    "beta", 30 * pi/180);
+                                    "beta", 30 * pi/180, "showSummary",true);
 
 
 %% Combustion chamber / Internal Ballistics (Real Performance)
@@ -70,5 +70,5 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
     propellant, performanceNom, nozzle, grain, constants);
 
 %% Nozzle cooling
-nozzleThermalModel(input, propellant, nozzle, ...
-    performance, cooling, constants)
+best = nozzleThermalModel(input, propellant, nozzle, ...
+    performance, cooling, constants,"makePlot",true);

@@ -57,6 +57,7 @@ arguments
     options.mdotTol     (1,1) double  = 1e-4
     options.makePlot    (1,1) logical = true
     options.showSummary (1,1) logical = true
+    options.compareCEA   (1,1) logical = true
 end
 
 %% ------------------------------------------------------------------------
@@ -71,6 +72,7 @@ end
 waterT0         = cooling(end).temperature;
 % kNozzleWall   = cooling.kWall;
 waterPressure   = cooling.pressure;
+
 % uWaterTarget  = cooling.velocity;
 
 % inputs from previous work. I put structs bc there is way too many
@@ -119,7 +121,65 @@ r(x > 0) = rt + x(x > 0)*tan(alpha);
 A = pi*r.^2;
 epsilon = A/At;
 
-% Hot flow quantities along the mesh. Initialized
+% Get data from CEA
+
+if options.compareCEA
+    epsConvCEA = sort(epsilon(1:n), 'descend')';
+    epsDivCEA  = sort(epsilon(n+1:end), 'ascend')';
+
+    % adjust BC if needed
+    GasCEA = getThermoProfileCEA(80, 20, input.pcNominal/1e5, epsConvCEA, epsDivCEA);
+
+    % Convergent branch of nozzle mesh
+    epsConvMesh = epsilon(1:n);
+
+    % Divergent branch of nozzle mesh
+    epsDivMesh  = epsilon(n:N);
+
+    % CEA data branches
+    epsConvCEA_data   = GasCEA.eps(1:length(epsConvCEA));
+    MachConvCEA_data  = GasCEA.Mach(1:length(epsConvCEA));
+    TConvCEA_data     = GasCEA.T(1:length(epsConvCEA));
+    gammaConvCEA_data = GasCEA.gamma(1:length(epsConvCEA));
+    cpConvCEA_data    = GasCEA.cp(1:length(epsConvCEA));
+
+    % throat + divergent branch
+    epsDivCEA_data   = [1, GasCEA.eps(length(epsConvCEA)+2:end)];
+    MachDivCEA_data  = [GasCEA.Mach(length(epsConvCEA)+1),  GasCEA.Mach(length(epsConvCEA)+2:end)];
+    TDivCEA_data     = [GasCEA.T(length(epsConvCEA)+1),     GasCEA.T(length(epsConvCEA)+2:end)];
+    gammaDivCEA_data = [GasCEA.gamma(length(epsConvCEA)+1), GasCEA.gamma(length(epsConvCEA)+2:end)];
+    cpDivCEA_data    = [GasCEA.cp(length(epsConvCEA)+1),    GasCEA.cp(length(epsConvCEA)+2:end)];
+
+    % Interpolate each branch separately because i have problems otherwise
+    machCEA  = zeros(size(epsilon));
+    TstatCEA = zeros(size(epsilon));
+    gammaCEA = zeros(size(epsilon));
+    cpCEA    = zeros(size(epsilon));
+
+    machCEA(1:n)  = interp1(epsConvCEA_data, MachConvCEA_data, epsConvMesh, 'linear', 'extrap');
+    TstatCEA(1:n) = interp1(epsConvCEA_data, TConvCEA_data,    epsConvMesh, 'linear', 'extrap');
+    gammaCEA(1:n) = interp1(epsConvCEA_data, gammaConvCEA_data, epsConvMesh, 'linear', 'extrap');
+    cpCEA(1:n)    = interp1(epsConvCEA_data, cpConvCEA_data,   epsConvMesh, 'linear', 'extrap');
+
+    machCEA(n:N)  = interp1(epsDivCEA_data, MachDivCEA_data, epsDivMesh, 'linear', 'extrap');
+    TstatCEA(n:N) = interp1(epsDivCEA_data, TDivCEA_data,    epsDivMesh, 'linear', 'extrap');
+    gammaCEA(n:N) = interp1(epsDivCEA_data, gammaDivCEA_data, epsDivMesh, 'linear', 'extrap');
+    cpCEA(n:N)    = interp1(epsDivCEA_data, cpDivCEA_data,   epsDivMesh, 'linear', 'extrap');
+
+    % First approximation: keep mu and Pr constant
+    muCEA = muGas * ones(size(epsilon));
+    PrCEA = PrGas * ones(size(epsilon));
+else
+    machCEA  = [];
+    TstatCEA = [];
+    gammaCEA = [];
+    cpCEA    = [];
+    muCEA    = [];
+    PrCEA    = [];
+end
+
+%% ISENTROPIC APPROACH
+
 % Get the Mach number based on area ratio at each point of the mesh
 mach        = zeros(N,1);
 mach(n) = 1;
@@ -129,8 +189,7 @@ for i = (n+1):(N), mach(i) = machFromAreaRatio(epsilon(i), gamma, 'supersonic');
 T0 = Tc * (1 + 0.5*(gamma-1)*performance.Mcc^2); % Under adiabatic conditions, T0 is constant
 
 % Bartz correlation used for h
-% Twall = 1500;   % only for sigma correction? Sutton stuff
-mDot  = 1;      % [kg/s] coolant mass flow rate
+% Twall = 1500;
 
 % Computing heat flux
 % Data i need:
@@ -139,14 +198,17 @@ mDot  = 1;      % [kg/s] coolant mass flow rate
 
 % Table of temperature along mesh for each cooling point
 T = zeros(N, length(cooling) + 1);
-dx = zeros(N,2);   % Thickness of each wall section
+
+dx = zeros(N,2);
+dx(:,1) = 5.0e-4;   % wall thickness [m]
+dx(:,2) = 1e-3;   % TBC thickness [m]
+
 q  = zeros(N-1,1); % Heat flux at each section
 
-% T(1, 1) = T0*recoveryFactor(gamma, performance.Mcc, PrGas); % Adiabatic wall temperature at inlet
-% T(1, 2:end-1) = nan; % Setting to nan, since this is only initial conditions, not cooling jacket
 T(1, end) = cooling(end).temperature; % Initial guess for water temperature at inlet
 
 % Surface area of each segment of the mesh, used for heat flux calculation
+
 dA = 2*pi*(sqrt(diff(x).^2 + diff(r).^2)) .* 0.5 .* (r(1:end-1) + r(2:end));
 
 for i = 1:N
@@ -155,7 +217,7 @@ for i = 1:N
     h1 = bartzCorrelation(input.pcNominal, performance.cstar, 2*rt, nozzle.rCurvature, epsilon(i), muGas, cpGas, PrGas);
     k2 = cooling(2).k;
     k3 = cooling(3).k;
-    h4 = 4000; %dittusCorrelation(Dc,kH2O,Re,Pr);
+    h4 = dittusCorrelation(cooling(end).Dc,cooling(end).k,cooling(end).Re, cooling(end).Pr); %dittusCorrelation(Dc,kH2O,Re,Pr);
 
     H = 1/(1/h1 + dx(i, 1)/k2 + dx(i, 2)/k3 + 1/h4);
 
@@ -167,88 +229,177 @@ for i = 1:N
     T(i, 4) = T(i, 3) - q(i)*dx(i, 2)/k3;
 
     if i < N
-        T(i+1, end) = T(i, end) + q(i)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
+        T(i+1, end) = T(i, end) + q(i)*dA(i)/(cooling(end).cp*cooling(end).mDot); % Update water temperature at station i
     end
 end
-% TBoil = waterSaturationTemperature(pWater); % depends on pressure!
 
-% Thickness of the wall loop to make it as thin as possible without water
-% boiling
+%% CEA
+if options.compareCEA
 
-% FIX THE TWALL. THE SAME? FOR ALL NOZZLE? Or should it be according the T
-% adiabatic
+    T_CEA  = zeros(N, length(cooling) + 1);
+    q_CEA  = zeros(N,1);
+    h1_CEA = zeros(N,1);
+    T0_CEA = zeros(N,1);
 
-% consider a regession rate for TBC
-% dont model it
+    T_CEA(1,end) = cooling(end).temperature;   % coolant inlet
+    
+    for i = 1:N
+        % Adiabatic wall temperature using local CEA data
+        T0_CEA(i) = TstatCEA(i) * (1 + 0.5*(gammaCEA(i)-1)*machCEA(i)^2); %%% THIS MIGHT BE WRONG. OBTAIN TOTAL TEMP FROM CEAAA
+        T_CEA(i,1) = T0_CEA(i) * recoveryFactor(gammaCEA(i), machCEA(i), PrCEA(i));
 
-%% ------------------------------------------------------------------------
-% Summary
-% -------------------------------------------------------------------------
-% if options.showSummary
-%     fprintf('\n');
-%     fprintf('====================================================\n');
-%     fprintf('              NOZZLE THERMAL MODEL                  \n');
-%     fprintf('====================================================\n');
-%     fprintf('Selected wall thickness      : %.6f m\n', best.t_wall);
-%     fprintf('Minimum water mass flow      : %.6f kg/s\n', best.cooling.mDotWater);
-%     fprintf('Equivalent channel gap       : %.6f m\n', best.cooling.gap);
-%     fprintf('Equivalent flow area         : %.6e m^2\n', best.cooling.Aflow);
-%     fprintf('Hydraulic diameter           : %.6f m\n', best.cooling.Dh);
-%     fprintf('Water Reynolds               : %.3f\n', best.cooling.Re);
-%     fprintf('Water Nusselt                : %.3f\n', best.cooling.Nu);
-%     fprintf('Water-side h                 : %.3f W/m^2/K\n', best.cooling.hWater);
-%     fprintf('Coolant inlet temperature    : %.3f K\n', TwaterInitial);
-%     fprintf('Coolant outlet temperature   : %.3f K\n', best.Twater_out);
-%     fprintf('Boiling limit                : %.3f K\n', best.cooling.TBoil);
-%     fprintf('Total heat rate              : %.3f W\n', best.Qdot_total);
-%     fprintf('Total heat                   : %.3f J\n', best.Q_total);
-%     fprintf('====================================================\n');
-%     fprintf('\n');
-% end
+        h1_CEA(i) = bartzCorrelation(input.pcNominal, performance.cstar, ...
+            2*rt, nozzle.rCurvature, epsilon(i), muCEA(i), cpCEA(i), PrCEA(i));
 
-%% ------------------------------------------------------------------------
-% Plot
-% -------------------------------------------------------------------------
-% if options.makePlot
-%     figure;
-% 
-%     subplot(2,2,1)
-%     plot(x, T0, 'LineWidth', 1.5); hold on
-%     plot(x, Taw, 'LineWidth', 1.5);
-%     plot(x, best.Tw_hot, 'LineWidth', 1.5);
-%     plot(x, best.Tw_cold, 'LineWidth', 1.5);
-%     plot(x, best.Twater, 'LineWidth', 1.5);
-%     grid on
-%     xlabel('x [m]')
-%     ylabel('Temperature [K]')
-%     legend('T_{static}','T_{aw}','T_{w,hot}','T_{w,cold}','T_{water}','Location','best')
-%     title(sprintf('Thermal profile, t = %.2f mm', 1e3*best.t_wall))
-% 
-%     subplot(2,2,2)
-%     plot(x, mach, 'LineWidth', 1.5)
-%     grid on
-%     xlabel('x [m]')
-%     ylabel('Mach')
-%     title('Mach profile')
-% 
-%     subplot(2,2,3)
-%     plot(x, hg, 'LineWidth', 1.5)
-%     grid on
-%     xlabel('x [m]')
-%     ylabel('h_g [W/m^2/K]')
-%     title('Bartz coefficient')
-% 
-%     subplot(2,2,4)
-%     xmid = 0.5*(x(1:end-1)+x(2:end));
-%     plot(xmid, best.qpp, 'LineWidth', 1.5)
-%     grid on
-%     xlabel('x [m]')
-%     ylabel('q'''' [W/m^2]')
-%     title('Heat flux')
-% end
+        k2 = cooling(2).k;
+        k3 = cooling(3).k;
+        h4 = dittusCorrelation(cooling(end).Dc, cooling(end).k, ...
+            cooling(end).Re, cooling(end).Pr);
+
+        H_CEA = 1/(1/h1_CEA(i) + dx(i,1)/k2 + dx(i,2)/k3 + 1/h4);
+
+        q_CEA(i) = H_CEA * (T_CEA(i,1) - T_CEA(i,end));
+
+        T_CEA(i,2) = T_CEA(i,1) - q_CEA(i)/h1_CEA(i);
+        T_CEA(i,3) = T_CEA(i,2) - q_CEA(i)*dx(i,1)/k2;
+        T_CEA(i,4) = T_CEA(i,3) - q_CEA(i)*dx(i,2)/k3;
+
+        if i < N
+            T_CEA(i+1,end) = T_CEA(i,end) + q_CEA(i)*dA(i)/(cooling(end).cp*cooling(end).mDot);
+        end
+    end
+
+else
+
+    T_CEA  = [];
+    q_CEA  = [];
+    h1_CEA = [];
+    T0_CEA = [];
 
 end
 
+best = struct();
+
+best.x       = x;
+best.r       = r;
+best.A       = A;
+best.epsilon = epsilon;
+best.mach    = mach;
+
+best.T       = T;
+best.q       = q;
+best.dA      = dA;
+best.T0_CEA = T0_CEA;
+
+best.dx      = dx;
+best.waterInletTemperature = cooling(end).temperature;
+best.waterPressure         = cooling.pressure;
+
+best.T_CEA   = T_CEA;
+best.q_CEA   = q_CEA;
+best.h1_CEA  = h1_CEA;
+
+best.machCEA  = machCEA;
+best.TstatCEA = TstatCEA;
+best.gammaCEA = gammaCEA;
+best.cpCEA    = cpCEA;
+
+%% PLOTS
+
+if options.makePlot
+
+    % Coolant temperature
+    figure('Name','Coolant temperature','NumberTitle','off');
+    plot(x, T(:,end) - 273.15, 'LineWidth', 1.8); hold on
+    if options.compareCEA
+        plot(x, T_CEA(:,end) - 273.15, '--', 'LineWidth', 1.8)
+        legend('Ideal/perfect gas','CEA','Location','best')
+    end
+    grid on
+    xlabel('x [m]')
+    ylabel('Coolant temperature [^\circ C]')
+    title('Coolant temperature along cooling jacket')
+
+    % Wall temperature (hot side)
+    figure('Name','Hot wall temperature','NumberTitle','off');
+    plot(x, T(:,2), 'LineWidth', 1.8); hold on
+    if options.compareCEA
+        plot(x, T_CEA(:,2), '--', 'LineWidth', 1.8)
+        legend('Ideal/perfect gas','CEA','Location','best')
+    end
+    grid on
+    xlabel('x [m]')
+    ylabel('Wall temperature [K]')
+    title('Hot-side wall temperature')
+
+    % Temperature through the wall / layers
+    figure('Name','Temperature through layers','NumberTitle','off');
+    plot(x, T(:,1), 'LineWidth', 1.8); hold on
+    plot(x, T(:,2), 'LineWidth', 1.8)
+    plot(x, T(:,3), 'LineWidth', 1.8)
+    plot(x, T(:,4), 'LineWidth', 1.8)
+    plot(x, T(:,end), 'LineWidth', 1.8)
+
+    if options.compareCEA
+        plot(x, T_CEA(:,1), '--', 'LineWidth', 1.8)
+        plot(x, T_CEA(:,2), '--', 'LineWidth', 1.8)
+        plot(x, T_CEA(:,3), '--', 'LineWidth', 1.8)
+        plot(x, T_CEA(:,4), '--', 'LineWidth', 1.8)
+        plot(x, T_CEA(:,end), '--', 'LineWidth', 1.8)
+
+        legend('T_{aw} ideal','Wall hot ideal','After wall ideal','After TBC ideal','Coolant ideal', ...
+               'T_{aw} CEA','Wall hot CEA','After wall CEA','After TBC CEA','Coolant CEA', ...
+               'Location','best')
+    else
+        legend('T_{aw}','Wall hot side','After wall','After TBC','Coolant', ...
+            'Location','best')
+    end
+    grid on
+    xlabel('x [m]')
+    ylabel('Temperature [K]')
+    title('Temperature profile across layers')
+
+    % Heat flux
+    figure('Name','Heat flux','NumberTitle','off');
+    plot(x, q, 'LineWidth', 1.8); hold on
+    if options.compareCEA
+        plot(x, q_CEA, '--', 'LineWidth', 1.8)
+        legend('Ideal/perfect gas','CEA','Location','best')
+    end
+    grid on
+    xlabel('x [m]')
+    ylabel('Heat flux [W/m^2]')
+    title('Heat flux along nozzle')
+
+    figure;
+    plot(x, machCEA, 'LineWidth', 1.8)
+    grid on
+    xlabel('x [m]')
+    ylabel('Mach [-]')
+    title('Mach from CEA interpolated to nozzle mesh')
+    figure;
+    plot(x, T0_CEA, 'LineWidth', 1.8)
+    grid on
+    xlabel('x [m]')
+    ylabel('T_{CEA} [K]')
+    title('Static temperature from CEA')
+
+    figure;
+    plot(x, gammaCEA, 'LineWidth', 1.8)
+    grid on
+    xlabel('x [m]')
+    ylabel('\gamma_{CEA} [-]')
+    title('Gamma from CEA')
+
+    figure;
+    plot(x, cpCEA, 'LineWidth', 1.8)
+    grid on
+    xlabel('x [m]')
+    ylabel('c_p [J/kg/K]')
+    title('cp from CEA')
+end
+
+end
 
 %% ========================================================================
 % Helper: simulation for one wall thickness and one water mass flow

@@ -1,14 +1,5 @@
 function cooling = coolingConfig(propellant)
-cooling.cp  = 4180;                                      % [J/kg/K]
-cooling.rho = 997;                                       % [kg/m^3]
-cooling.mu  = 0.89e-3;                                   % [Pa*s]
-cooling.kWater   = 0.60;                                 % [W/m/K]
-cooling.Pr  = cooling.cp * cooling.mu / cooling.kWater;  % Prandtl number
-
-cooling.inletTemperature = 18 + 273.15;             % [K]
 cooling.kWall = 10;                                 % [W/m*K]
-cooling.pressure = 10*1e5;                          % [Pa]
-cooling.velocity = 10;                              % [m/s]
 
 % Defining a struct to be used as cooling.
 % Having unique struct for conductive and convective heat transfer
@@ -56,9 +47,17 @@ cooling(4).rho = 997;
 cooling(4).mu  = 0.89e-3;
 cooling(4).k   = 0.60;
 cooling(4).Pr  = cooling(4).cp * cooling(4).mu / cooling(4).k;
-cooling(4).dx  = nan;
+cooling(4).dx  = 5*1e-4;
 cooling(4).temperature = 273.15 + 18;
 cooling(4).pressure = 10*1e5;
-cooling(4).mDot = 10;
+
+cooling(4).dP = 0.5e5; % [Pa]
+cooling(4).Dc   = 2*5e-3;                         % [m]
+cooling(4).A = (cooling(4).Dc/2)^2*pi;               % [m^2]
+
+cooling(4).velocity = sqrt(2*cooling(4).dP/cooling(4).rho);                           % [kg/s]
+cooling(4).mDot = cooling(4).velocity*(cooling(4).A*cooling(4).rho); % [m/s]
+cooling(4).Re = cooling(4).velocity*cooling(4).rho*cooling(4).Dc/cooling(4).mu; % [-]
+
 end
 
