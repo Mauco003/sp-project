@@ -149,7 +149,7 @@ T(1, end) = cooling(end).temperature; % Initial guess for water temperature at i
 % Surface area of each segment of the mesh, used for heat flux calculation
 dA = 2*pi*(sqrt(diff(x).^2 + diff(r).^2)) .* 0.5 .* (r(1:end-1) + r(2:end));
 
-for i = 1:N-1
+for i = 1:N
     T(i, 1) = T0*recoveryFactor(gamma, mach(i), PrGas); % Adiabatic wall temperature at station i
 
     h1 = bartzCorrelation(input.pcNominal, performance.cstar, 2*rt, nozzle.rCurvature, epsilon(i), muGas, cpGas, PrGas);
@@ -166,11 +166,10 @@ for i = 1:N-1
     T(i, 3) = T(i, 2) - q(i)*dx(i, 1)/k2;
     T(i, 4) = T(i, 3) - q(i)*dx(i, 2)/k3;
 
-    T(i+1, end) = T(i, end) + q(i)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
+    if i < N
+        T(i+1, end) = T(i, end) + q(i)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
+    end
 end
-
-[q] = computeHeatFlux(cooling, x, r);
-
 % TBoil = waterSaturationTemperature(pWater); % depends on pressure!
 
 % Thickness of the wall loop to make it as thin as possible without water

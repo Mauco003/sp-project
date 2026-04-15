@@ -23,6 +23,7 @@ cooling(1).Pr  = cooling(1).cp * cooling(1).mu / cooling(1).k;
 cooling(1).dx  = nan;
 cooling(1).temperature = nan;
 cooling(1).pressure = nan;
+cooling(1).mDot = nan;
 
 %% TBC
 cooling(2).type = "conductive";
@@ -34,6 +35,7 @@ cooling(2).Pr  = cooling(2).cp * cooling(2).mu / cooling(2).k;
 cooling(2).dx  = nan;
 cooling(2).temperature = nan;
 cooling(2).pressure = nan;
+cooling(2).mDot = nan;
 
 %% Wall
 cooling(3).type = "conductive";
@@ -45,6 +47,7 @@ cooling(3).Pr  = cooling(3).cp * cooling(3).mu / cooling(3).k;
 cooling(3).dx  = nan;
 cooling(3).temperature = nan;
 cooling(3).pressure = nan;
+cooling(3).mDot = nan;
 
 %% Coolant (Water)
 cooling(4).type = "convective";
@@ -56,5 +59,6 @@ cooling(4).Pr  = cooling(4).cp * cooling(4).mu / cooling(4).k;
 cooling(4).dx  = nan;
 cooling(4).temperature = 273.15 + 18;
 cooling(4).pressure = 10*1e5;
+cooling(4).mDot = 10;
 end
 
