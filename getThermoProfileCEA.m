@@ -17,9 +17,9 @@ function [ChamberData,GasData] = getThermoProfileCEA(wtAP, wtHTPB, p_c_bar, eps_
 %
 %  - Units
 %    - eps, Mach, gamma, prandtl [-]
-%    - T [K]
-%    - cp [J/(kg*K)]
-%    - viscosity [millipoise]
+%    - T         [K]
+%    - cp        [J/(kg*K)]
+%    - viscosity [Pa*s]
 %     
 %
 % EXAMPLE OF INPUT
@@ -72,7 +72,7 @@ function [ChamberData,GasData] = getThermoProfileCEA(wtAP, wtHTPB, p_c_bar, eps_
         cp_conv(i)  = (R_spec * gam_conv(i) / (gam_conv(i) - 1)) / 1000; % [kJ/(kg*K)]
         
         pr_conv(i)   = out.output.eql.prandtl.froz(end);
-        visc_conv(i) = out.output.eql.viscosity(end)/100;
+        visc_conv(i) = out.output.eql.viscosity(end)*1e-6;
     end
     % Extract Chamber Data 
     R_spec_ch = 8314.46 / out.output.eql.mw(1);
@@ -91,10 +91,10 @@ function [ChamberData,GasData] = getThermoProfileCEA(wtAP, wtHTPB, p_c_bar, eps_
     cp_th     = (R_spec_th * gam_th / (gam_th - 1)) / 1000;
     
     pr_th     = out.output.eql.prandtl.froz(2);
-    visc_th   = out.output.eql.viscosity(2)/100;
+    visc_th   = out.output.eql.viscosity(2)*1e-6;
    % NOTE
    % Cea Matlab normally gives 100 * millipoise unit for viscosity
-   % so value is divided for 100 to obtain millipoise
+   % so value is divided for 1e-6 to obtain Pa*s
    
     % 2. DIVERGENT SECTION (FROZEN)
     for i = 1:N_div
@@ -113,7 +113,7 @@ function [ChamberData,GasData] = getThermoProfileCEA(wtAP, wtHTPB, p_c_bar, eps_
         cp_div(i)  = out.output.froz.cp(end);    
         
         pr_div(i)   = out.output.eql.prandtl.froz(end);
-        visc_div(i) = out.output.eql.viscosity(end)/100;                              
+        visc_div(i) = out.output.eql.viscosity(end)*1e-6;                              
     end
     
     % 3. DATA ASSEMBLY
