@@ -84,7 +84,7 @@ pc    = propellant.ccPressure;
 cStar = performance.cstar;
 muGas = propellant.cea.mu;
 cpGas = R * gamma/(gamma-1);
-PrGas = muGas*cpGas / propellant.cea.k;
+PrGas = muGas*cpGas / propellant.cea.k; % Suppose it is constant for now
 
 % nozzle
 At    = nozzle.At;
@@ -136,37 +136,36 @@ Twall = 1500;   % only for sigma correction? Sutton stuff
 %   T, adiabatic
 
 % Table of temperature along mesh for each cooling point
-T = zeros(2*n-1, length(cooling) + 1);
+T = zeros(2*n, length(cooling) + 1);
 dx = zeros(2*n-1,2); % Thickness of each wall section
+q  = zeros(2*n-1,1); % Heat flux at each station
 
+q(1) = 0; % Initial guess for heat flux at inlet, then it is updated iteratively
 
-for i = 1:length(x)
-    % Solve heat flux at station i
-    recoveryFactor = (1 + 0.5*PrGas^(1/3)*(gamma-1)*mach.^2)./ ...
-    (1+ 0.5*(gamma-1)*mach.^2);                  % Based on 05-Liquid-PART4-Cooling, pg. 10
-    Taw = T0 .*recoveryFactor;
-    
-    if i == 1
-        T(i, end) = cooling(end).temperature; % Initial guess for water temperature at inlet
-        T(i, 1) = Taw;
-    else
-        T(i, 1) = T(i-1, 1);
-        T(i, end) = T(i-1, end) + computeHeatFlux(cooling, x(i-1:i), r(i-1:i), T(i-1:i, :));
-    end
+T(1, 1) = T0*recoveryFactor(gamma, performance.Mcc, PrGas); % Adiabatic wall temperature at inlet
+T(2, end-1) = nan; % Setting to nan, since this is only initial conditions, not cooling jacket
+T(1, end) = cooling(end).temperature; % Initial guess for water temperature at inlet
 
+% Surface area of each segment of the mesh, used for heat flux calculation
+dA = 2*pi*(sqrt(diff(x).^2 + diff(r).^2)) .* 0.5*(r(1:end-1) + r(2:end));
+
+for i = 2:length(x)  
+    T(i, 1) = T0*recoveryFactor(gamma, mach(i), PrGas); % Adiabatic wall temperature at station i
+    T(i, end) = T(i-1, end) + q(i-1)*dA(i)/(cooling(end).cp*mDot); % Update water temperature at station i
 
     h1 = bartzCorrelation(pc, cstar, 2*rt, nozzle.rCurvature, epsilon, mu, cp, Pr);
     k2 = cooling(2).k;
     k3 = cooling(3).k;
-    h4 = 1; % Celia
+    h4 = dittusCorrelation(Dc,kH2O,Re,Pr);
 
     H = 1/(1/h1 + dx(i, 1)/k2 + dx(i, 2)/k3 + 1/h4);
 
-    q = H * (T(i, 1) - T(i, end));
+    q(i) = H * (T(i, 1) - T(i, end));
 
-
-
-
+    % Update intermediate station tempeartures
+    T(i, 2) = T(i, 1) - q(i)/h1;
+    T(i, 3) = T(i, 2) - q(i)*dx(i, 1)/k2;
+    T(i, 4) = T(i, 3) - q(i)*dx(i, 2)/k3;
 end
 
 [q] = computeHeatFlux(cooling, x, r);
