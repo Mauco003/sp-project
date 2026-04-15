@@ -3,7 +3,7 @@ clear; close all; clc
 
 addpath(genpath("./src"))
 
-plotFlag = false;
+plotFlag = true;
 
 propellant = propellantConfig();
 cooling = coolingConfig();
@@ -47,8 +47,6 @@ mPTot = performanceNom.mDot*input.burningTime;                                  
 % Grain sizing (using Richard Nakka formulation)
 grain = grainConfiguration(rbNominal, input.burningTime, mPTot, propellant.cea);
 if plotFlag, plotHollowCylinder(grain); end
-
-
 
 % Nozzle geometry (conical) sizing
 %

@@ -44,7 +44,7 @@ function best = nozzleThermalModel(input, propellant, nozzle, performance, cooli
 
 arguments
     input
-    propellant                      struct
+    propellant                struct
     nozzle                    struct
     performance               struct
     cooling                   struct
@@ -68,9 +68,9 @@ end
 % cooling.k   = 0.60;                                 % [W/m/K]
 % cooling.Pr  = cooling.cp * cooling.mu / cooling.k;  % Prandtl number
 
-TwaterInitial = cooling.inletTemperature;
+waterT0         = cooling(end).temperature;
 % kNozzleWall   = cooling.kWall;
-pWater        = cooling.pressure;
+waterPressure   = cooling.pressure;
 % uWaterTarget  = cooling.velocity;
 
 % inputs from previous work. I put structs bc there is way too many
@@ -127,18 +127,51 @@ for i = (n+1):(2*n-1), mach(i) = machFromAreaRatio(epsilon(i), gamma, 'supersoni
 
 T0 = Tc * (1 + 0.5*(gamma-1)*performance.Mcc^2); % Under adiabatic conditions, T0 is constant
 
-recoveryFactor = (1 + 0.5*PrGas^(1/3)*(gamma-1)*mach.^2)./ ...
-    (1+ 0.5*(gamma-1)*mach.^2);                  % Based on 05-Liquid-PART4-Cooling, pg. 10
-Taw = T0 .*recoveryFactor;
-
 % Bartz correlation used for h
 Twall = 1500;   % only for sigma correction? Sutton stuff
-hg = bartzCorrelation(input.pcNominal, cStar, 2*rt, A, At, ...
-                         muGas, cpGas, PrGas, gamma, mach, Tc, Twall);
 
-% Boiling temperature from water pressure
+% Computing heat flux
+% Data i need:
+%   T(x), isoentropic
+%   T, adiabatic
 
-TBoil = waterSaturationTemperature(pWater); % depends on pressure!
+% Table of temperature along mesh for each cooling point
+T = zeros(2*n-1, length(cooling) + 1);
+dx = zeros(2*n-1,2); % Thickness of each wall section
+
+
+for i = 1:length(x)
+    % Solve heat flux at station i
+    recoveryFactor = (1 + 0.5*PrGas^(1/3)*(gamma-1)*mach.^2)./ ...
+    (1+ 0.5*(gamma-1)*mach.^2);                  % Based on 05-Liquid-PART4-Cooling, pg. 10
+    Taw = T0 .*recoveryFactor;
+    
+    if i == 1
+        T(i, end) = cooling(end).temperature; % Initial guess for water temperature at inlet
+        T(i, 1) = Taw;
+    else
+        T(i, 1) = T(i-1, 1);
+        T(i, end) = T(i-1, end) + computeHeatFlux(cooling, x(i-1:i), r(i-1:i), T(i-1:i, :));
+    end
+
+
+    h1 = bartzCorrelation(pc, cstar, 2*rt, nozzle.rCurvature, epsilon, mu, cp, Pr);
+    k2 = cooling(2).k;
+    k3 = cooling(3).k;
+    h4 = 1; % Celia
+
+    H = 1/(1/h1 + dx(i, 1)/k2 + dx(i, 2)/k3 + 1/h4);
+
+    q = H * (T(i, 1) - T(i, end));
+
+
+
+
+end
+
+[q] = computeHeatFlux(cooling, x, r);
+
+% TBoil = waterSaturationTemperature(pWater); % depends on pressure!
 
 % Thickness of the wall loop to make it as thin as possible without water
 % boiling

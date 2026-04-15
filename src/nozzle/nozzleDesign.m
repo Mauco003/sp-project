@@ -55,6 +55,7 @@ nozzle.Acc = Acc;
 nozzle.At = At;
 nozzle.Ae = Ae;
 nozzle.epsilon = Ae/At;
+nozzle.rCurvature = 1; % I added radius of curvature of throat
 
 nozzle.alpha = options.alpha;
 nozzle.beta  = options.beta;

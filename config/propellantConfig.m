@@ -1,4 +1,7 @@
-function propellant = propellantConfig()
+function propellant = propellantConfig(constants)
+    arguments
+        constants Constants = Constants()
+    end
 % Propellant configuration from empirical data and CEA
 
 % Taulated data
@@ -14,8 +17,11 @@ propellant.burnRate = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
 propellant.cea.gamma = 1.2386*1.00032;                                            % Specific heat ratio [-]
 propellant.cea.ccTemperature = 2342.92;                                           % Chamber temperature [K]
 propellant.cea.molarMass = 22.087;
+propellant.cea.cp = constants.R/(propellant.cea.molarMass) * ...
+    propellant.cea.gamma/(propellant.cea.gamma - 1);                                                   % [J/kg/K]
 propellant.cea.mu = 0.78107*1e-4;       % [Pa*s]
 propellant.cea.k  = 2.7189 *1e-1;       % [W/m*K] Steady state heat conductivity
+propellant.cea.rhoGas = 7.9368;     % [kg/m^3] Gas density at chamber conditions
 
 propellant.cea.rhoAP = 1950;                                                               % Ammonium perchlorate density [kg/m^3]
 propellant.cea.rhoHTPB = 913;                                                              % HTPB density [kg/m^3]
