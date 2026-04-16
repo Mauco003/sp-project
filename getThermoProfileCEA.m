@@ -122,8 +122,8 @@ function [ChamberData,GasData] = getThermoProfileCEA(wtAP, wtHTPB, p_c_bar, eps_
     GasData.gamma     = [gam_conv, gam_th, gam_div];
     GasData.cp        = [cp_conv, cp_th, cp_div] * 1000; % Convert kJ to J/(kg*K)
     GasData.prandtl   = [pr_conv, pr_th, pr_div];
-    GasData.viscosity = [visc_conv, visc_th, visc_div]./1e5;
-      % NOTE
-   % Cea Matlab normally gives 100 * millipoise unit for viscosity
-   % so value is divided for 1e6 to obtain millipoise
+    GasData.viscosity = [visc_conv, visc_th, visc_div] * 1e-6;
+    % NOTE
+    % Cea Matlab normally gives 100 * millipoise unit for viscosity
+    % so value is divided for 1e6 to obtain millipoise
 end

@@ -128,6 +128,6 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     
    % Cea Matlab normally gives 100 * millipoise unit for viscosity
    % so value is divided for 1e6 to obtain millipoise
-       GasData.viscosity = [visc_conv, visc_th, visc_div] * 1e-5; 
+       GasData.viscosity = [visc_conv, visc_th, visc_div] * 1e-6; 
     
 end
