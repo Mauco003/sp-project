@@ -35,7 +35,7 @@ rbNominal = a*pcNominal^n;                                                      
 
 
 %% Ideal thermodynamics & mass sizing
-[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(thrust, data.cea.ccTemperature, pcNominal, peNominal, data.cea.gamma, data.cea.molarMass, constants);
+[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
 
 mPTot = performanceNom.mDot*burningTime;                                          % Total propellant mass [kg]
 
