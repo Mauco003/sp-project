@@ -128,7 +128,7 @@ if options.compareCEA
     epsDivCEA  = sort(epsilon(n+1:end), 'ascend')';
 
     % adjust BC if needed
-    GasCEA = getThermoProfileCEA(80, 20, input.pcNominal/1e5, epsConvCEA, epsDivCEA);
+    [~, GasCEA] = getThermoProfileCEA(80, 20, input.pcNominal/1e5, epsConvCEA, epsDivCEA);
 
     % Convergent branch of nozzle mesh
     epsConvMesh = epsilon(1:n);
