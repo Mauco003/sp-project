@@ -37,20 +37,7 @@ rbNominal = a*input.pcNominal^n;                                                
 
 
 %% Ideal thermodynamics & mass sizing
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 [performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
-=======
-[performanceNom, AtIdeal, AeIdeal] = idealPerformance(thrust, propellant.cea.ccTemperature, pcNominal, peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
->>>>>>> c52e2b5 (Reorganize into folders and cleanup)
-=======
-[performanceNom, AtIdeal, AeIdeal] = idealPerformance(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
->>>>>>> 5011f48 (Working nozzleThermalModel in main)
-=======
-[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
->>>>>>> 26367ee (Adapt some functions to changes in dev)
-
 mPTot = performanceNom.mDot*input.burningTime;                                          % Total propellant mass [kg]
 
 
