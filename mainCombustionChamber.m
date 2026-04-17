@@ -71,7 +71,7 @@ casing = struct();
 casing.thickness = (pc*d_grain)/(2*hoopStress) * safetyFactor;
 casing.thermalConductivity = 42.7;
 casing.TMax = 2000;
-casing.cost = 1;        % [cost per kg]
+casing.cost = 0.8;        % [cost per kg]
 casing.density = 7850;   % kg/m^3
 
 %% LINER
@@ -79,7 +79,7 @@ liner = struct();
 liner.thickness = 50;
 liner.thermalConductivity = 0.225;
 liner.regressionRate = 0.225;         % g/s*m^2
-liner.cost = 1;         % [cost per kg]
+liner.cost = 7;         % [cost per kg]
 liner.density = 1208;   % kg/m^3
 
 %% OPTIONS

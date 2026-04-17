@@ -120,8 +120,6 @@ T_casingOuter = T_linerCasing - q * (t_casing/k_casing);
 
 % First check casing temperature
 if T_linerCasing < TMax
-    % we gucci baldinucci
-    disp("We gucci baldinucci - casing survives");
     casing.survival = true;
 else
     % we no gucci
@@ -139,9 +137,6 @@ else
     % liner is burned through before end of burn
     liner.survival = false;
 end
-
-% Now optimize for cost and mass
-
 
 % Results
 results = struct();
