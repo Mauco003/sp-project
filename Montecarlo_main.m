@@ -16,20 +16,6 @@
 %      - alpha: Nozzle divergent half-angle
 %      - beta: Nozzle convergent half-angle
 
-
-%% Setup
-
-clear; close all; clc
-
-addpath(genpath("./src"))
-plotFlag = 1;
-
-if ~exist(fullfile('.', 'data'), 'dir') || ~exist(fullfile('.', 'data', 'propellant.mat'), 'file')
-    data = savePropellantData();
-else
-    data = load(fullfile('.', 'data', 'propellant.mat'));
-end
-
 %%
 
 main;
@@ -86,17 +72,75 @@ L_parete_div = L_div/cosd(alpha);
 delta_alpha = atand(delta_parete/L_parete_div);
 alphaSigma = delta_alpha/3;
 
-% initializing the Monte Carlo simulation
-mcmax = 1000;
+%% initializing the Monte Carlo simulation
+
+iter = 100;
+uncFuncChoice = 2;
+
+
 aNominal = a;
 nNominal = n;
 
-dataMC = data;
+switch uncFuncChoice
+    case 1
+        % --- CASE 1: INDEPENDENT SAMPLING WITH MESHGRID ---
+        [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
+        aSigmaMC = aSigmaMC * 1e-3/(10^(6*nNominal));
+        
+        aMCunshuffled = aNominal * ones(iter, 1) + randn(iter, 1) * aSigmaMC;
+        nMCunshuffled = nNominal * ones(iter, 1) + randn(iter, 1) * nSigma;
+        
+        % initializing the shuffle => incorporated with meshgrid
+        [aMC_matrix, nMC_matrix] = meshgrid(aMCunshuffled, nMCunshuffled);
+        
+        % flatten the matrices into 1D vectors
+        aMC_array = aMC_matrix(:);
+        nMC_array = nMC_matrix(:);
+        
+    case 2
+        % --- CASE 2: CORRELATED MULTIVARIATE SAMPLING ---
+        [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
+        
+        % To match the size of the meshgrid output (iter * iter)
+        total_samples = iter^2; 
+        samples_qm = mvnrnd(mu_qm, Sigma_qm, total_samples);
+        
+        qMC = samples_qm(:, 1);
+        nMC_array = samples_qm(:, 2);
+        
+        % Transform q back to a and convert to SI units
+        aMC_array = exp(qMC);
+        aMC_array = aMC_array .* 1e-3 ./ (10.^(6 .* nMC_array)); 
+        
+    otherwise
+        error("flag not defined.")
+end
+
+mcmax = numel(aMC_array); % Total number of combinations
+
+dataMC = propellant;
 constantsMC = constants;
 nozzleMC = nozzle;
 grainMC = grain;
 
+% ---------------------------------------------------------
+% PRE-GENERATE ALL RANDOM INPUTS OUTSIDE THE LOOP (VECTORIZED)
+% ---------------------------------------------------------
+aVec    = reshape(aMC_array, 1, mcmax);
+nVec    = reshape(nMC_array, 1, mcmax);
+OFVec   = OFNominal + randn(1, mcmax) * OFSigma;
+pambVec = constants.pAmb + randn(1, mcmax) * pambSigma;
+AtVec   = (dtNominal + randn(1, mcmax) * dtSigma).^2 * pi/4;
+AeVec   = (deNominal + randn(1, mcmax) * deSigma).^2 * pi/4;
+betaVec = beta + randn(1, mcmax) * betaSigma;
+alphaVec= alpha + randn(1, mcmax) * alphaSigma;
+dextVec = grain.dExt0 + randn(1, mcmax) * dextSigma;
+dintVec = grain.dInt0 + randn(1, mcmax) * dintSigma;
+LVec    = grainMC.L0 + randn(1, mcmax) * LSigma;
+MpVec   = mPTot + randn(1, mcmax) * mPSigma;
 
+
+% Pre-allocate output arrays
 T_max = zeros(1,mcmax);
 T_avg = zeros(1,mcmax);
 Isp_max = zeros(1,mcmax);
@@ -107,29 +151,29 @@ rB = zeros(1,mcmax);
 Isp_tot_max = zeros(1,mcmax);
 deltatGuaranteedThrust = zeros(1,mcmax);
 
+%% Physics Execution Loop
+
 for index = 1:mcmax
-    aMc = aNominal + randn()*aSigma;
-    nMc = nNominal + randn()*nSigma;
+    % 1. Extract the pre-calculated random values for this iteration
+    aMc    = aVec(index);
+    nMc    = nVec(index);
+    OFMc   = OFVec(index);
+    pambMc = pambVec(index);
+    AtMc   = AtVec(index);
+    AeMc   = AeVec(index);
+    betaMc = betaVec(index); 
+    alphaMc= alphaVec(index);
+    dextMc = dextVec(index);
+    dintMc = dintVec(index);
+    LMc    = LVec(index);
+    MpMc   = MpVec(index);
 
-    OFMc = OFNominal + randn()*OFSigma;
-    pambMc = constants.pAmb + randn()*pambSigma;
-
-    AtMc = (dtNominal + randn()*dtSigma)^2*pi/4;
-    AeMc = (deNominal + randn()*deSigma)^2*pi/4;
-    betaMc = beta + randn()*betaSigma;
-    alphaMc = alpha + randn()*alphaSigma;
-
-    dextMc = grain.dExt0 + randn()*dextSigma;
-    dintMc = grain.dInt0 + randn()*dintSigma;
-    LMc    = grainMC.L0 + randn()*LSigma;
-
-    MpMc = mPTot + randn()*mPSigma;
-
-    rB(index) = aMc * pcNominal^nMc;
+    % 2. Setup the structures for this run
+    rB(index) = aMc * input.pcNominal^nMc;
 
     MOx = OFMc/(1 + OFMc);
     MF  = 1/(1 + OFMc);
-    dataMC.cea.rhoP = 1/(MOx/data.cea.rhoAP + MF/data.cea.rhoHTPB);
+    dataMC.cea.rhoP = 1/(MOx/propellant.cea.rhoAP + MF/propellant.cea.rhoHTPB);
 
     constantsMC.pAmb = pambMc;
     nozzleMC.At = AtMc;
@@ -139,11 +183,13 @@ for index = 1:mcmax
     grainMC.dInt0 = dintMc;
     grainMC.L0    = LMc;
 
+    % 3. Run computations
     [tMC_output, performanceMC_output, grainMC_output] = ...
         computePerformance(aMc, nMc, dataMC, performanceNom, nozzleMC, grainMC, constantsMC);
 
     I_tot = trapz(tMC_output, performanceMC_output.thrust);
 
+    % 4. Store outputs
     T_max(index) = max(performanceMC_output.thrust);
     T_avg(index) = mean(performanceMC_output.thrust);
     Isp_avg(index) = mean(performanceMC_output.Isp);
@@ -156,8 +202,6 @@ for index = 1:mcmax
     if any(idx)
         timevector = tMC_output(idx);
         deltatGuaranteedThrust(index) = timevector(end) - timevector(1);
-    else
-        deltatGuaranteedThrust(index) = 0;
     end
 end
 
@@ -228,12 +272,6 @@ title('Monte Carlo output spread')
 ylabel('Value')
 
 % -------- 4) Sensitivity-style scatter plots --------
-% Only if you stored these arrays inside the loop:
-% aVec(index)=aMc; nVec(index)=nMc; OFVec(index)=OFMc; pambVec(index)=pambMc;
-% AtVec(index)=AtMc; AeVec(index)=AeMc; dextVec(index)=dextMc;
-% dintVec(index)=dintMc; LVec(index)=LMc; MpVec(index)=MpMc;
-%
-% If not stored yet, add those assignments inside the Monte Carlo loop.
 
 if exist('aVec','var') && exist('OFVec','var') && exist('AtVec','var')
     figure('Name','Monte Carlo - Input/Output Sensitivity');
