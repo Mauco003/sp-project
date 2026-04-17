@@ -7,9 +7,7 @@
 %      - n: Vieille's law exponent
 
 %% Setup
-
 clear; close all; clc
-
 
 
 % calling all the variables/structures coming from the main
@@ -17,8 +15,8 @@ main;
 
 
 
-iter = 1000;
-uncFuncChoice = 2;
+iter = 500;
+uncFuncChoice = 1;
 
 aNom = a;
 nNom = n;
@@ -27,7 +25,7 @@ nNom = n;
 switch uncFuncChoice
     case 1
         % --- CASE 1: INDEPENDENT SAMPLING WITH MESHGRID ---
-        [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(data.ccPressure * 1e-6, data.burnRate * 1e3);
+        [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         aSigmaMC = aSigmaMC * 1e-3/(10^(6*nNom));
         
         aMCunshuffled = aNom * ones(iter, 1) + randn(iter, 1) * aSigmaMC;
@@ -42,7 +40,7 @@ switch uncFuncChoice
         
     case 2
         % --- CASE 2: CORRELATED MULTIVARIATE SAMPLING ---
-        [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(data.ccPressure * 1e-6, data.burnRate * 1e3);
+        [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         
         % To match the size of the meshgrid output (iter * iter), we directly 
         % draw that many samples from the correlated multivariate distribution.
@@ -64,7 +62,7 @@ end
 %%
 
 
-rhoP = data.cea.rhoP;
+rhoP = propellant.cea.rhoP;
 cStar = performanceNom.cstar;
 Athroat = nozzle.At;
 
@@ -179,3 +177,86 @@ xlabel('Iteration');
 ylabel('\sigma MEOP (Pa)');
 title('Standard Deviation of MEOP');
 grid on;
+
+
+if uncFuncChoice == 1
+    rho_a_MEOP = corr(aMC, MEOP, 'Type', 'Spearman');
+    rho_n_MEOP = corr(nMC, MEOP, 'Type', 'Spearman');
+    rho_a_BT   = corr(aMC, burntime, 'Type', 'Spearman');
+    rho_n_BT   = corr(nMC, burntime, 'Type', 'Spearman');
+else
+    % sensitivity analysis
+    % changing a, constant n
+    aMCSens1 = aMC;
+    burntimeSens1 = zeros(iterMC, 1);
+    MEOPSens1 = zeros(iterMC, 1);
+    for index = 1:iterMC
+        a = aMCSens1(index);
+        n = nNom;
+        [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
+        burntimeSens1(index) = max(t);
+        MEOPSens1(index) = max(p);
+    end
+    
+    meanBTSens1 = mean(burntimeSens1);
+    stdBTSens1 = std(burntimeSens1);
+    
+    meanMEOPSens1 = mean(MEOPSens1);
+    stdMEOPSens1 = std(MEOPSens1);
+    
+    % changing n, constant a
+    nMCSens2 = nMC;
+    burntimeSens2 = zeros(iterMC, 1);
+    MEOPSens2 = zeros(iterMC, 1);
+    
+    for index = 1:iterMC
+        a = aMCSens2(index);
+        n = nNom;
+        [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
+        burntimeSens2(index) = max(t);
+        MEOPSens2(index) = max(p);
+    end
+
+    meanBTSens2 = mean(burntimeSens2);
+    stdBTSens2 = std(burntimeSens2);
+    meanMEOPSens2 = mean(MEOPSens2);
+    stdMEOPSens2 = std(MEOPSens2);
+end
+
+
+% %% sensitivity analysis
+% % changing a, constant n
+% aMCSens1 = aMC;
+% burntimeSens1 = zeros(iterMC, 1);
+% MEOPSens1 = zeros(iterMC, 1);
+% 
+% parfor index = 1:iterMC
+%     a = aMCSens1(index);
+%     n = nNom;
+%     [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
+%     burntimeSens1(index) = max(t);
+%     MEOPSens1(index) = max(p);
+% end
+% 
+% meanBTSens1 = mean(burntimeSens1);
+% stdBTSens1 = std(burntimeSens1);
+% meanMEOPSens1 = mean(MEOPSens1);
+% stdMEOPSens1 = std(MEOPSens1);
+% 
+% %% changing n, constant a
+% nMCSens2 = nMC;
+% burntimeSens2 = zeros(iterMC, 1);
+% MEOPSens2 = zeros(iterMC, 1);
+% 
+% parfor index = 1:iterMC
+%     a = aMCSens2(index);
+%     n = nNom;
+%     [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
+%     burntimeSens2(index) = max(t);
+%     MEOPSens2(index) = max(p);
+% end
+% 
+% meanBTSens2 = mean(burntimeSens2);
+% stdBTSens2 = std(burntimeSens2);
+% meanMEOPSens2 = mean(MEOPSens2);
+% stdMEOPSens2 = std(MEOPSens2);
