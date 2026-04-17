@@ -23,69 +23,166 @@ end
 main;
 
 
-[~, aSigma, ~, nSigma, ~] = uncertaintyVieille(data.ccPressure * 1e-5, data.burnRate * 1e3);
+
+iter = 1000;
+uncFuncChoice = 2;
 
 aNom = a;
 nNom = n;
 
-aSigma = aSigma * 1e-3/(10^(5*n));
+%%
+switch uncFuncChoice
+    case 1
+        % --- CASE 1: INDEPENDENT SAMPLING WITH MESHGRID ---
+        [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(data.ccPressure * 1e-6, data.burnRate * 1e3);
+        aSigmaMC = aSigmaMC * 1e-3/(10^(6*nNom));
+        
+        aMCunshuffled = aNom * ones(iter, 1) + randn(iter, 1) * aSigmaMC;
+        nMCunshuffled = nNom * ones(iter, 1) + randn(iter, 1) * nSigma;
+        
+        % initializing the shuffle => incorporated with meshgrid
+        [aMC_matrix, nMC_matrix] = meshgrid(aMCunshuffled, nMCunshuffled);
+        
+        % flatten the matrices into 1D vectors for the parfor loop
+        aMC = aMC_matrix(:);
+        nMC = nMC_matrix(:);
+        
+    case 2
+        % --- CASE 2: CORRELATED MULTIVARIATE SAMPLING ---
+        [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(data.ccPressure * 1e-6, data.burnRate * 1e3);
+        
+        % To match the size of the meshgrid output (iter * iter), we directly 
+        % draw that many samples from the correlated multivariate distribution.
+        total_samples = iter^2; 
+        samples_qm = mvnrnd(mu_qm, Sigma_qm, total_samples);
+        
+        qMC = samples_qm(:, 1);
+        nMC = samples_qm(:, 2);
+        
+        % Transform q back to a and convert to SI units
+        aMC = exp(qMC);
+        aMC = aMC .* 1e-3 ./ (10.^(6 .* nMC)); 
+        
+    otherwise
+        error("flag not defined.")
+end
+
+
+%%
+
 
 rhoP = data.cea.rhoP;
 cStar = performanceNom.cstar;
 Athroat = nozzle.At;
 
-iter = 100;
-aMCunshuffled = aNom * ones(iter, 1) + randn(iter, 1) * aSigma;
-nMCunshuffled = nNom * ones(iter, 1) + randn(iter, 1) * nSigma;
-
-% initializing the shuffle => incorporated with meshgrid
-
-[aMC, nMC] = meshgrid(aMCunshuffled, nMCunshuffled);
-
-matrixMC = [aMC(:), nMC(:)];
-iterMC = size(matrixMC, 1);
+% Use numel to get the total number of combinations (100 * 100 = 10000)
+iterMC = numel(aMC);
 
 burntime = zeros(iterMC, 1);
 MEOP = zeros(iterMC, 1);
 
-for index = 1:iterMC
+%%
 
-    a = matrixMC(index, 1);
-    n = matrixMC(index, 2);
+parfor index = 1:iterMC
+    a = aMC(index);
+    n = nMC(index);
     [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
     burntime(index) = max(t);
     MEOP(index) = max(p);
-
 end
+
+%%
 
 meanBT = mean(burntime);
 stdBT = std(burntime);
 meanMEOP = mean(MEOP);
 stdMEOP = std(MEOP);
 
+
+% Cumulative tracking arrays
 progBTMean = cumsum(burntime) ./ (1:iterMC)';
 progBTDevStd = sqrt((cumsum(burntime.^2) ./ (1:iterMC)') - progBTMean.^2);
-
-errorBTMean = abs(meanBT * ones(iterMC, 1) - progBTMean)/meanBT * 100;
-
-figure()
-semilogy(1:iterMC-1, errorBTMean(1:end-1))
-
-errorBTDevStd = abs(stdBT * ones(iterMC, 1) - progBTDevStd)/stdBT * 100;
-
-figure()
-semilogy(1:iterMC-1, errorBTDevStd(1:end-1))
-
 
 progMEOPMean = cumsum(MEOP) ./ (1:iterMC)';
 progMEOPDevStd = sqrt((cumsum(MEOP.^2) ./ (1:iterMC)') - progMEOPMean.^2);
 
+% Relative Error Calculations (%) compared to the final aggregated value
+errorBTMean = abs(progBTMean - meanBT) / meanBT * 100;
+errorBTDevStd = abs(progBTDevStd - stdBT) / stdBT * 100;
 
-% Plotting the results
-figure;
-subplot(2, 1, 1);
-plot(1:iterMC, progBTMean, 'b-', 'LineWidth', 1.5);
+errorMEOPMean = abs(progMEOPMean - meanMEOP) / meanMEOP * 100;
+errorMEOPDevStd = abs(progMEOPDevStd - stdMEOP) / stdMEOP * 100;
+
+%% Plotting Relative Convergence
+
+
+figure('Name', 'Relative Error Convergence Monitoring');
+
+% Burn Time Mean Error
+subplot(2, 2, 1);
+semilogy(1:iterMC-1, errorBTMean(1:end-1), 'b-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('Relative Error (%)');
+title('Burn Time: Mean Convergence');
+grid on;
+
+% Burn Time Standard Deviation Error
+subplot(2, 2, 2);
+semilogy(1:iterMC-1, errorBTDevStd(1:end-1), 'r-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('Relative Error (%)');
+title('Burn Time: Std Dev Convergence');
+grid on;
+
+% MEOP Mean Error
+subplot(2, 2, 3);
+semilogy(1:iterMC-1, errorMEOPMean(1:end-1), 'b-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('Relative Error (%)');
+title('MEOP: Mean Convergence');
+grid on;
+
+% MEOP Standard Deviation Error
+subplot(2, 2, 4);
+semilogy(1:iterMC-1, errorMEOPDevStd(1:end-1), 'r-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('Relative Error (%)');
+title('MEOP: Std Dev Convergence');
+grid on;
+
+
+%% Plotting
+
+figure('Name', 'Convergence Monitoring');
+
+% Burn Time Mean
+subplot(2, 2, 1);
+semilogy(1:iterMC, progBTMean, 'b-', 'LineWidth', 1.5);
 xlabel('Iteration');
 ylabel('Burn Time (s)');
-title('Mean Burn Time with Standard Deviation');
+title('Mean Burn Time');
+grid on;
+
+% Burn Time Standard Deviation
+subplot(2, 2, 2);
+plot(1:iterMC, progBTDevStd, 'r-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('\sigma Burn Time (s)');
+title('Standard Deviation of Burn Time');
+grid on;
+
+% MEOP Mean
+subplot(2, 2, 3);
+plot(1:iterMC, progMEOPMean, 'b-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('MEOP (Pa)');
+title('Mean MEOP');
+grid on;
+
+% MEOP Standard Deviation
+subplot(2, 2, 4);
+plot(1:iterMC, progMEOPDevStd, 'r-', 'LineWidth', 1.5);
+xlabel('Iteration');
+ylabel('\sigma MEOP (Pa)');
+title('Standard Deviation of MEOP');
 grid on;

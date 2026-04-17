@@ -23,8 +23,8 @@ function [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat)
 
     [t, x] = ode45(@(t, x) burnODE(t, x, SRM), [0, inf], x0, options);
     rInt = x(:, 1);
-    grain.L0 = x(:, 2);
-    Ab = 2*pi*(rExt^2-rInt.^2)+2*pi*grain.L0.*rInt;
+    grain.L = x(:, 2);
+    Ab = 2*pi*(rExt^2-rInt.^2)+2*pi*grain.L.*rInt;
     p = (a.*rhoP.*cStar.*Ab./Athroat).^(1./(1-n));
     rb = a.*(p.^n);
 end
@@ -48,8 +48,8 @@ function dx = burnODE(~, x, SRM)
     dx(2) = -2*rb;
 end
 
-function [value,isterminal,direction] = eventFunc(~,x, rExt)
-    value = ~(rExt - x(1)<1e-14 || x(2)<1e-14);
-    isterminal = 1;
-    direction = 0;
+function [value, isterminal, direction] = eventFunc(~, x, rExt)
+    value = [rExt - x(1); x(2)]; % Tracks both web burn-through and length burn-through continuously
+    isterminal = [1; 1];         % Stop integration if EITHER hits zero
+    direction = [0; 0];          % Approach from any direction
 end
