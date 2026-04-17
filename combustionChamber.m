@@ -43,8 +43,6 @@ TMax = casing.TMax;
 h_out = 10;                              % [W/m^2/K], natural convection
 T_ambient = 293.15;                      % [K], assumed
 
-
-
 % chemistry and gas composition
 R = constants.R / propellant.cea.molarMass;
 
@@ -141,8 +139,16 @@ end
 
 % Now optimize for cost and mass
 
+
 % Results
 results = struct();
+
+results.T_linerInner = T_linerInner;
+results.T_linerCasing = T_linerCasing;
+results.T_casingOuter = T_casingOuter;
+results.q = q;
+results.hg = hg;
+
 results.casingSurvives = casing.survival;
 results.linerSurvives = liner.survival;
 
