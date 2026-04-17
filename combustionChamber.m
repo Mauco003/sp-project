@@ -129,7 +129,10 @@ else
 end
 
 % Next check lining exists for the entire burn time
-if t_liner > r_burn*liner.regressionRate
+linerConsumed = liner.regressionRate / liner.density * t_burn;   % [m]
+liner.survival = t_liner > linerConsumed;
+
+if liner.survival
     % liner survives
     liner.survival = true;
 else

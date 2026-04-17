@@ -34,8 +34,8 @@ mass_casing = casing.density * v_casing;
 total_mass = mass_liner + mass_casing;
 
 %% defining the cost model
-costTotal = liner.cost * m_liner + casing.cost * m_casing;
-massTotal = m_liner + m_casing;
+costTotal = liner.cost * mass_liner + casing.cost * mass_casing;
+massTotal = mass_liner + mass_casing;
 
 % weigted combination 
 J = wMass * massTotal + wCost * costTotal;

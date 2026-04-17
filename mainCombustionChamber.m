@@ -63,24 +63,24 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
 
 
 %% CASING
-hoopStress = 120e6;       % update these w real vals
+hoopStress = 460e6;       % update these w real vals
 safetyFactor = 1.5;     % update w real values
-pc = 70;
+pc = 70e5;
 
 casing = struct();
 casing.thickness = (pc*d_grain)/(2*hoopStress) * safetyFactor;
-casing.thermalConductivity = 1;
-casing.TMax = 100;
+casing.thermalConductivity = 42.7;
+casing.TMax = 2000;
 casing.cost = 1;        % [cost per kg]
-casing.density = 1;
+casing.density = 7850;   % kg/m^3
 
 %% LINER
 liner = struct();
-liner.thickness = 1;
-liner.thermalConductivity = 1;
-liner.regressionRate = 1;
+liner.thickness = 50;
+liner.thermalConductivity = 0.225;
+liner.regressionRate = 0.225;         % g/s*m^2
 liner.cost = 1;         % [cost per kg]
-liner.density = 1;
+liner.density = 1208;   % kg/m^3
 
 %% OPTIONS
 t_low = 1e-3;
@@ -110,9 +110,9 @@ wCost = 1;
 % t_opt = t_high;
 
 
-
-tL_vals = linspace(1e-3, 20e-3, 40);   % liner thickness [m]
-tC_vals = linspace(1e-3, 20e-3, 40);   % casing thickness [m]
+% ranges to search
+tL_vals = linspace(1e-3, 100e-3, 10000);   % liner thickness [m]
+tC_vals = linspace(casing.thickness, 10000e-3, 10000);   % casing thickness [m]
 
 best.J = 1000000000000;
 
