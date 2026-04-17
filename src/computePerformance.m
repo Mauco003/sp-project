@@ -1,9 +1,9 @@
-function [t, performance, grain] = computePerformance(a, n, data, performanceNom, nozzle, grain, constants, options)
+function [t, performance, grain] = computePerformance(a, n, propellant, performanceNom, nozzle, grain, constants, options)
     
     arguments
         a
         n
-        data
+        propellant
         performanceNom
         nozzle
         grain
@@ -16,7 +16,7 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
     lambda = 0.5*(1+cos(options.alpha));
 
 
-    [t, pc, rb] = computeBurn(a, n, data.cea.rhoP, performanceNom.cstar, grain, nozzle.At);
+    [t, pc, rb] = computeBurn(a, n, propellant.cea.rhoP, performanceNom.cstar, grain, nozzle.At);
 
     y = cumtrapz(t, rb);
 
@@ -27,9 +27,9 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
     Ab = 2*pi*(0.25*grain.dExt0^2 - rInt.^2) + 2*pi*rInt.*L;
     Ab(Ab<0) = 0;
 
-    mDot = Ab .* rb * data.cea.rhoP;
+    mDot = Ab .* rb * propellant.cea.rhoP;
 
-    gamma = data.cea.gamma;
+    gamma = propellant.cea.gamma;
 
     Mcc = machFromAreaRatio(nozzle.Acc/nozzle.At, gamma, 'subsonic'); % Computing mach in combustion chamber
     Me = machFromAreaRatio(nozzle.Ae/nozzle.At, gamma, 'supersonic'); % Computing mach at nozzle exit
@@ -43,7 +43,7 @@ function [t, performance, grain] = computePerformance(a, n, data, performanceNom
     cfStatic = (pe-constants.pAmb)./pc * nozzle.epsilon;
     cf = cfMom + cfStatic;
 
-    cstar = performanceNom.cstar;
+    cstar = performanceNom.cstar*options.etaTheta;
     thrust = mDot .* cstar .* cf;
     Isp = (cstar .* cf) ./ constants.g0;
 

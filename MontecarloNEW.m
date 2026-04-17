@@ -10,14 +10,7 @@
 
 clear; close all; clc
 
-addpath(genpath("./src"))
-plotFlag = 1;
 
-if ~exist(fullfile('.', 'data'), 'dir') || ~exist(fullfile('.', 'data', 'propellant.mat'), 'file')
-    data = savePropellantData();
-else
-    data = load(fullfile('.', 'data', 'propellant.mat'));
-end
 
 % calling all the variables/structures coming from the main
 main;

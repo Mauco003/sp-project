@@ -12,15 +12,18 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %
 % OUTPUTS:
 %   ChamberData - Struct containing thermodynamic properties of the 
-%                 combustion chamber (molar_mass, gamma, cp, R_spec).
+%                 combustion chamber (molar_mass, gamma, cp, R_spec, T0, 
+%                 conductivity).
 %   GasData     - Struct containing arrays of M, T, gamma, cp, 
-%                 prandtl, and viscosity aligned from inlet to outlet.
+%                 prandtl, viscosity, conductivity aligned from inlet to outlet.
 %
 % UNITS:
 %   - eps, Mach, gamma, prandtl [-]
 %   - T [K]
 %   - cp [J/(kg*K)]
 %   - viscosity [Pa*s]
+%   - conductivity [W/(m*K)]
+%   - density of the gas [kg/m^3]
 %  
 % EXAMPLE OF INPUT
 %  p_chamber = 70; % bar
@@ -29,7 +32,6 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %  -------
 %  [ChamberData,GasData] = getThermoProfileCEA_froz(80, 20, p_chamber, eps_inlet, eps_exit);
 %  -------
-
     % Ensure proper sorting to avoid CEA solver issues
     eps_conv = sort(eps_conv, 'descend');
     eps_div  = sort(eps_div, 'ascend');
@@ -41,10 +43,12 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     T_conv = zeros(1, N_conv); M_conv = zeros(1, N_conv);
     cp_conv = zeros(1, N_conv); gam_conv = zeros(1, N_conv);
     pr_conv = zeros(1, N_conv); visc_conv = zeros(1, N_conv);
+    cond_conv = zeros(1, N_conv);
     
     T_div = zeros(1, N_div); M_div = zeros(1, N_div);
     cp_div = zeros(1, N_div); gam_div = zeros(1, N_div);
     pr_div = zeros(1, N_div); visc_div = zeros(1, N_div);
+    cond_div = zeros(1, N_div);
      
     
     % 1. CONVERGENT SECTION (FULL FROZEN, nfz = 1)
@@ -70,6 +74,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
         % Direct Transport Extraction
         pr_conv(i)   =   out.output.froz.prandtl.froz(end);
         visc_conv(i) =   out.output.froz.viscosity(end);
+        cond_conv(i) =   out.output.froz.conduct.froz(end);
     end
     
     % - Extract Chamber Data
@@ -79,6 +84,11 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     ChamberData.T          = out.output.froz.temperature(1);
     % Cp via Mayer's relation for Chamber directly in [J/(kg*K)]
     ChamberData.cp         = ChamberData.R_spec * ChamberData.gamma / (ChamberData.gamma - 1); 
+    ChamberData.prandtl   =   out.output.froz.prandtl.froz(1);
+    ChamberData.viscosity =   out.output.froz.viscosity(1)* 1e-6;
+    ChamberData.conductivity = out.output.froz.conduct.froz(1);
+    ChamberData.density =  out.output.froz.density(1);
+
     
     % - Extract Throat Data
     T_th   = out.output.froz.temperature(2);
@@ -91,6 +101,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     
     pr_th   =   out.output.froz.prandtl.froz(2);
     visc_th =   out.output.froz.viscosity(2);
+    cond_th =   out.output.froz.conduct.froz(2);
    
     
     % 2. DIVERGENT SECTION (FULL FROZEN, nfz = 1)
@@ -116,6 +127,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
         % Direct Transport Extraction
         pr_div(i)   =   out.output.froz.prandtl.froz(end);
         visc_div(i) =     out.output.froz.viscosity(end);
+        cond_div(i) =   out.output.froz.conduct.froz(end);
     end
     
     % 3. DATA ASSEMBLY
@@ -125,6 +137,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     GasData.gamma     = [gam_conv, gam_th, gam_div];
     GasData.cp        = [cp_conv, cp_th, cp_div] * 1000; % Convert kJ to J/(kg*K)
     GasData.prandtl   = [pr_conv, pr_th, pr_div];
+    GasData.conductivity = [cond_conv, cond_th, cond_div];
     
    % Cea Matlab normally gives 100 * millipoise unit for viscosity
    % so value is divided for 1e6 to obtain millipoise
