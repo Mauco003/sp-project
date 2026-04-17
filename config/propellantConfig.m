@@ -14,16 +14,24 @@ propellant.burnRate = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
                 7.1; 8.4; 8.3; 8.6; 8.8; 9.0; 9.2]*1e-3;
 
 % from NASA CEA output 80% AP - 20% HTPB
-propellant.cea.gamma = 1.2386*1.00032;                                            % Specific heat ratio [-]
-propellant.cea.ccTemperature = 2342.92;                                           % Chamber temperature [K]
-propellant.cea.molarMass = 22.087;
-propellant.cea.cp = constants.R/(propellant.cea.molarMass) * ...
-    propellant.cea.gamma/(propellant.cea.gamma - 1);                                                   % [J/kg/K]
-propellant.cea.mu = 0.78107*1e-4;       % [Pa*s]
-propellant.cea.k  = 2.7189 *1e-1;       % [W/m*K] Steady state heat conductivity
-propellant.cea.rhoGas = 7.9368;     % [kg/m^3] Gas density at chamber conditions
+wtAP = 80;
+wtHPTB = 20;
+p_chamber = 70; % bar
+  eps_inlet = [2.0];
+  eps_exit  = [2.0];
 
-propellant.cea.rhoAP = 1950;                                                               % Ammonium perchlorate density [kg/m^3]
+  
+  [Chamber, ~] = getThermoProfileCEA_froz(wtAP, wtHPTB, p_chamber, eps_inlet, eps_exit);
+  
+propellant.cea.gamma = Chamber.gamma;                                            % Specific heat ratio [-]
+propellant.cea.ccTemperature = Chamber.T;                                           % Chamber temperature [K]
+propellant.cea.molarMass = Chamber.molar_mass;
+propellant.cea.cp = Chamber.cp;                                                   % [J/kg/K]
+propellant.cea.mu = Chamber.viscosity;       % [Pa*s]
+propellant.cea.k  = Chamber.conductivity;       % [W/m*K] Steady state heat conductivity
+propellant.cea.rhoGas = Chamber.density;     % [kg/m^3] Gas density at chamber conditions
+
+propellant.cea.rhoAP = 1950;         % DATA -NOT- FROM CEA                                                     % Ammonium perchlorate density [kg/m^3]
 propellant.cea.rhoHTPB = 913;                                                              % HTPB density [kg/m^3]
-propellant.cea.rhoP = 1/(0.8/propellant.cea.rhoAP +  0.2/propellant.cea.rhoHTPB);                                        % Propellant density [kg/m^3]
+propellant.cea.rhoP = 100/(wtAP/propellant.cea.rhoAP +  wtHPTB/propellant.cea.rhoHTPB);                                        % Propellant density [kg/m^3]
 end

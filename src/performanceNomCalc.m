@@ -12,7 +12,6 @@ arguments
     options.showSummary = false
     options.alpha = 15*pi/180
     options.etaF = 0.95
-    options.etaTheta = 0.95
 end
 
 g0    = constants.g0;
@@ -27,7 +26,7 @@ cfId = cfIdeal(gamma, pe, pc);
 
 % Apply the efficiencies 
 cf = cfId*options.etaF*lambda;
-cstar = cstarId * options.etaTheta;
+cstar = cstarId;
 
 Isp = cf*cstar/g0;
 mdot  = thrust/(cstar*cf);
