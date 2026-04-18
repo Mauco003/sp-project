@@ -21,7 +21,7 @@ p_chamber = 70; % bar
   eps_exit  = [2.0];
 
   
-  [Chamber, ~] = getThermoProfileCEA_froz(wtAP, wtHPTB, p_chamber, eps_inlet, eps_exit);
+  [Chamber, GasInfo] = getThermoProfileCEA_froz(wtAP, wtHPTB, p_chamber, eps_inlet, eps_exit);
   
 propellant.cea.gamma = Chamber.gamma;                                            % Specific heat ratio [-]
 propellant.cea.ccTemperature = Chamber.T;                                           % Chamber temperature [K]
@@ -30,6 +30,14 @@ propellant.cea.cp = Chamber.cp;                                                 
 propellant.cea.mu = Chamber.viscosity;       % [Pa*s]
 propellant.cea.k  = Chamber.conductivity;       % [W/m*K] Steady state heat conductivity
 propellant.cea.rhoGas = Chamber.density;     % [kg/m^3] Gas density at chamber conditions
+
+propellant.cea.cstar = GasInfo.exit.cstar;
+propellant.cea.exit.cf = GasInfo.exit.cf;
+propellant.cea.exit.mach = GasInfo.exit.mach;
+propellant.cea.exit.pressure = GasInfo.exit.pressure;
+propellant.cea.exit.temperature = GasInfo.exit.temperature;
+
+
 
 propellant.cea.rhoAP = 1950;         % DATA -NOT- FROM CEA                                                     % Ammonium perchlorate density [kg/m^3]
 propellant.cea.rhoHTPB = 913;                                                              % HTPB density [kg/m^3]

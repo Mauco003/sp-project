@@ -16,15 +16,19 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %                 conductivity).
 %   GasData     - Struct containing arrays of M, T, gamma, cp, 
 %                 prandtl, viscosity, conductivity aligned from inlet to outlet.
+%                 Also exit properties are present (P,T,gamma,cstar, cf, Mach)
 %
 % UNITS:
-%   - eps, Mach, gamma, prandtl [-]
+%   - eps, Mach, gamma, prandtl, cf [-]
 %   - T [K]
+%   - P [Pa]
 %   - cp [J/(kg*K)]
 %   - viscosity [Pa*s]
 %   - conductivity [W/(m*K)]
 %   - density of the gas [kg/m^3]
-%  
+%   - cstar [m/s]
+%
+%
 % EXAMPLE OF INPUT
 %  p_chamber = 70; % bar
 %  eps_inlet = 2.0 : -0.01 : 1.01;
@@ -94,7 +98,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     GasData.exit.cstar = out.output.froz.cstar(3);
     GasData.exit.mach = out.output.froz.mach(3);
     GasData.exit.gamma = out.output.froz.gamma(3);
-    GasData.exit.pressure = out.output.froz.pressure(3);
+    GasData.exit.pressure = out.output.froz.pressure(3)*1e5;
     GasData.exit.temperature =  out.output.froz.temperature(3);
 
     % - Extract Throat Data
