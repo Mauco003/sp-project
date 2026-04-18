@@ -89,7 +89,14 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
     ChamberData.conductivity = out.output.froz.conduct.froz(1);
     ChamberData.density =  out.output.froz.density(1);
 
-    
+    % - Extract Exit Data
+    GasData.exit.cf = out.output.froz.cf(3);
+    GasData.exit.cstar = out.output.froz.cstar(3);
+    GasData.exit.mach = out.output.froz.mach(3);
+    GasData.exit.gamma = out.output.froz.gamma(3);
+    GasData.exit.pressure = out.output.froz.pressure(3);
+    GasData.exit.temperature =  out.output.froz.temperature(3);
+
     % - Extract Throat Data
     T_th   = out.output.froz.temperature(2);
     M_th   = out.output.froz.mach(2);
