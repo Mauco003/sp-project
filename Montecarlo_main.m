@@ -118,7 +118,7 @@ end
 
 mcmax = numel(aMC_array); % Total number of combinations
 
-dataMC = propellant;
+propellantMC = propellant;
 constantsMC = constants;
 nozzleMC = nozzle;
 grainMC = grain;
@@ -173,7 +173,10 @@ for index = 1:mcmax
 
     MOx = OFMc/(1 + OFMc);
     MF  = 1/(1 + OFMc);
-    dataMC.cea.rhoP = 1/(MOx/propellant.cea.rhoAP + MF/propellant.cea.rhoHTPB);
+    propellantMC.cea.rhoP = 1/(MOx/propellant.cea.rhoAP + MF/propellant.cea.rhoHTPB);
+    
+    [ChamberData, ~] = getThermoProfileCEA_froz(MOx*1e2, MF*1e2, input.pcNominal, 2, 2);
+    propellantMC.cea.gamma = ChamberData.gamma;
 
     constantsMC.pAmb = pambMc;
     nozzleMC.At = AtMc;
@@ -185,7 +188,7 @@ for index = 1:mcmax
 
     % 3. Run computations
     [tMC_output, performanceMC_output, grainMC_output] = ...
-        computePerformance(aMc, nMc, dataMC, performanceNom, nozzleMC, grainMC, constantsMC);
+        computePerformance(aMc, nMc, propellantMC, performanceNom, nozzleMC, grainMC, constantsMC);
 
     I_tot = trapz(tMC_output, performanceMC_output.thrust);
 
