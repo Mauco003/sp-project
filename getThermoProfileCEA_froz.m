@@ -17,7 +17,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %   GasData     - Struct containing arrays of M, T, gamma, cp, 
 %                 prandtl, viscosity, conductivity aligned from inlet to outlet.
 %                 Also exit properties are present (P,T,gamma,cstar, cf, Mach)
-%
+%                 
 % UNITS:
 %   - eps, Mach, gamma, prandtl, cf [-]
 %   - T [K]
@@ -36,6 +36,9 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %  -------
 %  [ChamberData,GasData] = getThermoProfileCEA_froz(80, 20, p_chamber, eps_inlet, eps_exit);
 %  -------
+%  NOTE:
+% For exit values use GasData.exit.P 
+%
     % Ensure proper sorting to avoid CEA solver issues
     eps_conv = sort(eps_conv, 'descend');
     eps_div  = sort(eps_div, 'ascend');
