@@ -17,7 +17,7 @@ function [ChamberData, GasData] = getThermoProfileCEA_froz(wtAP, wtHTPB, p_c_bar
 %   GasData     - Struct containing arrays of M, T, gamma, cp, 
 %                 prandtl, viscosity, conductivity aligned from inlet to outlet.
 %                 Also exit properties are present (P,T,gamma,cstar, cf, Mach)
-%                 
+%                 EXIT PROPERTIES FOR ADAPTED NOZZLE [!]
 % UNITS:
 %   - eps, Mach, gamma, prandtl, cf [-]
 %   - T [K]

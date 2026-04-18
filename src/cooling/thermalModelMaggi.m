@@ -38,8 +38,8 @@ stationNames = {'Inlet e=2','Conv e=1.5','Throat','Div e=1.5','Exit e=2'};
 %    getThermoProfileCEA(..., eConv, eDiv) returns 3 stations:
 %    [station at eConv, throat, station at eDiv]
 % -------------------------------------------------------------------------
-[~, GasCEA_2]   = getThermoProfileCEA(80, 20, pc/1e5, 2.0, 2.0);
-[~, GasCEA_15]  = getThermoProfileCEA(80, 20, pc/1e5, 1.5, 1.5);
+[~, GasCEA_2]   = getThermoProfileCEA_froz(80, 20, pc/1e5, 2.0, 2.0);
+[~, GasCEA_15]  = getThermoProfileCEA_froz(80, 20, pc/1e5, 1.5, 1.5);
 
 % Build 5-point station data
 Gas5.gamma     = [GasCEA_2.gamma(1),     GasCEA_15.gamma(1),     GasCEA_2.gamma(2),     GasCEA_15.gamma(3),     GasCEA_2.gamma(3)];

@@ -28,22 +28,26 @@ function [t, performance, grain] = computePerformance(a, n, propellant, performa
     Ab(Ab<0) = 0;
 
     mDot = Ab .* rb * propellant.cea.rhoP;
-
-    gamma = propellant.cea.gamma;
-
-    Mcc = machFromAreaRatio(nozzle.Acc/nozzle.At, gamma, 'subsonic'); % Computing mach in combustion chamber
-    Me = machFromAreaRatio(nozzle.Ae/nozzle.At, gamma, 'supersonic'); % Computing mach at nozzle exit
     
-    p0 = pc .* (1+0.5*(gamma-1)*Mcc.^2).^(gamma/(gamma-1)); % Total cc pressure
+    N = length(t);
 
-    pe = p0 ./ (1 + 0.5*(gamma-1)*Me.^2).^(gamma/(gamma-1)); % Static pressure in combustion chamber
+    for i=1:N
+    temp_exit = getExitCEA(propellant.wtAP,propellant.wtHTPB, pc(i), nozzle.epsilon);
+    exit_data.pressure(i) = temp_exit.pressure;
+    exit_data.mach(i)     = temp_exit.mach;
+    exit_data.cf(i)       = temp_exit.cf;
+    exit_data.cstar(i)    = temp_exit.cstar;
+    end
+  
 
-    cfMomId = cfIdeal(gamma, pe, pc);
+    cfMomId = exit_data.cf;
+
     cfMom = cfMomId .* lambda .* options.etaF;
-    cfStatic = (pe-constants.pAmb)./pc * nozzle.epsilon;
+    cfStatic = (exit_data.pressure'-constants.pAmb*eye(N,1))./pc * nozzle.epsilon;
     cf = cfMom + cfStatic;
 
-    cstar = performanceNom.cstar*options.etaTheta;
+    cstar = exit_data.cstar';
+
     thrust = mDot .* cstar .* cf;
     Isp = (cstar .* cf) ./ constants.g0;
 
@@ -55,11 +59,12 @@ function [t, performance, grain] = computePerformance(a, n, propellant, performa
     performance.mDot = mDot;
     performance.ve = ve;
     performance.pc = pc;
-    performance.pe = pe;
-    performance.Mcc = Mcc;
-    performance.Me = Me;
+    performance.pe = exit_data.pressure(i);
+    %performance.Mcc = Mcc;
+    performance.Me = exit_data.mach;
     performance.rb = rb;
-    performance.cstar = performanceNom.cstar;
+    performance.cstar = exit_data.cstar(i);
+    performance.ct = exit_data.cf(i);
     
     grain.dInt = 2*rInt;
     grain.Ab = Ab;

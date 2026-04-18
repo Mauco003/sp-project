@@ -14,14 +14,14 @@ propellant.burnRate = [4.0; 3.8; 4.1; 5.6; 6.0; 5.7; 7.0; 7.2; ...
                 7.1; 8.4; 8.3; 8.6; 8.8; 9.0; 9.2]*1e-3;
 
 % from NASA CEA output 80% AP - 20% HTPB
-wtAP = 80;
-wtHPTB = 20;
-p_chamber = 70; % bar
+propellant.wtAP = 80;
+propellant.wtHTPB = 20;
+propellant.p_chamber = 70; % bar
   eps_inlet = [2.0];
   eps_exit  = [2.0];
 
   
-  [Chamber, GasInfo] = getThermoProfileCEA_froz(wtAP, wtHPTB, p_chamber, eps_inlet, eps_exit);
+  [Chamber, GasInfo] = getThermoProfileCEA_froz(propellant.wtAP, propellant.wtHTPB, propellant.p_chamber, eps_inlet, eps_exit);
   
 propellant.cea.gamma = Chamber.gamma;                                            % Specific heat ratio [-]
 propellant.cea.ccTemperature = Chamber.T;                                           % Chamber temperature [K]
@@ -32,14 +32,9 @@ propellant.cea.k  = Chamber.conductivity;       % [W/m*K] Steady state heat cond
 propellant.cea.rhoGas = Chamber.density;     % [kg/m^3] Gas density at chamber conditions
 
 propellant.cea.cstar = GasInfo.exit.cstar;
-propellant.cea.exit.cf = GasInfo.exit.cf;
-propellant.cea.exit.mach = GasInfo.exit.mach;
-propellant.cea.exit.pressure = GasInfo.exit.pressure;
-propellant.cea.exit.temperature = GasInfo.exit.temperature;
-
 
 
 propellant.cea.rhoAP = 1950;         % DATA -NOT- FROM CEA                                                     % Ammonium perchlorate density [kg/m^3]
 propellant.cea.rhoHTPB = 913;                                                              % HTPB density [kg/m^3]
-propellant.cea.rhoP = 100/(wtAP/propellant.cea.rhoAP +  wtHPTB/propellant.cea.rhoHTPB);                                        % Propellant density [kg/m^3]
+propellant.cea.rhoP = 100/(propellant.wtAP/propellant.cea.rhoAP +  propellant.wtHTPB/propellant.cea.rhoHTPB);                                        % Propellant density [kg/m^3]
 end
