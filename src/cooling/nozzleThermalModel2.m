@@ -476,7 +476,7 @@ epsDivMesh  = epsilon(iTh+1:end);
 epsConvCEA = sort(unique(epsConvMesh), 'descend').';
 epsDivCEA  = sort(unique(epsDivMesh), 'ascend').';
 
-[~, GasCEA] = getThermoProfileCEA(80, 20, pcNominal/1e5, epsConvCEA, epsDivCEA);
+[~, GasCEA] = getThermoProfileCEA_froz(80, 20, pcNominal/1e5, epsConvCEA, epsDivCEA);
 
 nConv = numel(epsConvCEA);
 nDiv  = numel(epsDivCEA);

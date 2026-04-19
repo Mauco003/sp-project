@@ -313,7 +313,7 @@ Rcond = tTBC/cfg.kTBC + cfg.tWall/cfg.kMetal;
 THot_guess = min(max(THot_ref, cfg.Tcw_max + 1e-6), Taw - 1e-6);
 
 for iter = 1:50
-    hGas = bartzCorrelation(cfg.pc, cfg.cStar, cfg.Dt, cfg.rCurvature, epsi, ...
+    hGas = bartzCorrelation(cfg.pc, cfg.cStar(1), cfg.Dt, cfg.rCurvature, epsi, ...
                             muGas, cpGas, PrGas, THot_guess, cfg.T0, Tstat, 0.6);
 
     qDot = (Taw - cfg.Tcw_max) / (1/hGas + Rcond);
