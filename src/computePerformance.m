@@ -73,7 +73,7 @@ cf = cfMom' + cfStatic;
 cstar = exit_data.cstar;
 
 T = mDot .* cstar' .* cf;
-Isp = (cstar .* cf) ./ constants.g0;
+Isp = (cstar .* cf') ./ constants.g0;
 
 ve = cstar .* cfMom;
 
