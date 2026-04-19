@@ -1,46 +1,4 @@
-function best = nozzleThermalModel(input, propellant, nozzle, performance, cooling, constants, options)
-%NOZZLETHERMALMODEL
-% Thermal model with:
-%   - gas-side Bartz correlation
-%   - one single conductive wall
-%   - equivalent annular cooling jacket
-%   - iterative search for minimum wall thickness and minimum water mass flow
-%
-% Conical nozzle is assumed
-%
-% Main idea:
-%   q'' = (Taw - Twater_bulk) / (1/hg + t/k + 1/hWater)
-%
-% Inputs:
-%   thermo.gamma
-%   thermo.Tc
-%   thermo.pc
-%   thermo.cstar
-%   thermo.mu_gas
-%   thermo.cp_gas
-%   thermo.Pr_gas
-%   thermo.recoveryModel
-%
-%   nozzle.At
-%   nozzle.alpha
-%   nozzle.beta
-%   nozzle.burnTime
-%
-%   cooling.Twater_in
-%   cooling.k_wall
-%   cooling.pWater         % coolant pressure [Pa]
-%   cooling.uWaterTarget   % target bulk velocity in cooling jacket [m/s]
-%   cooling.TBCthickness   % [m]
-%
-% Options:
-%   options.Npts
-%   options.AA_limit
-%   options.t_start
-%   options.t_step
-%   options.t_max
-%   options.mdotTol
-%   options.makePlot
-%   options.showSummary
+function qDotAlongX = nozzleThermalModel(input, propellant, nozzle, performance, cooling, constants, options)
 
 arguments
     input
@@ -60,24 +18,16 @@ arguments
     options.compareCEA   (1,1) logical = true
 end
 
-%% ------------------------------------------------------------------------
-% Fixed water properties (first version)
-% -------------------------------------------------------------------------
-% cooling.cp  = 4180;                                 % [J/kg/K]
-% cooling.rho = 997;                                  % [kg/m^3]
-% cooling.mu  = 0.89e-3;                              % [Pa*s]
-% cooling.k   = 0.60;                                 % [W/m/K]
-% cooling.Pr  = cooling.cp * cooling.mu / cooling.k;  % Prandtl number
+cooling.cp  = 4180;                                 % [J/kg/K]
+cooling.rho = 997;                                  % [kg/m^3]
+cooling.mu  = 0.89e-3;                              % [Pa*s]
+cooling.k   = 0.60;                                 % [W/m/K]
+cooling.Pr  = cooling.cp * cooling.mu / cooling.k;  % Prandtl number
 
-waterT0         = cooling(end).temperature;
-% kNozzleWall   = cooling.kWall;
-waterPressure   = cooling.pressure;
+waterT0       = cooling(end).temperature;
+kNozzleWall   = cooling.kWall;
+waterPressure = cooling.pressure;
 
-% uWaterTarget  = cooling.velocity;
-
-% inputs from previous work. I put structs bc there is way too many
-
-% chemical
 R = constants.R / propellant.cea.molarMass;
 
 gamma = propellant.cea.gamma;
@@ -200,9 +150,10 @@ T0 = Tc * (1 + 0.5*(gamma-1)*performance.Mcc^2); % Under adiabatic conditions, T
 T = zeros(N, length(cooling) + 1);
 
 dx = zeros(N,2);
-dx(:,1) = 5.0e-4;   % wall thickness [m]
-dx(:,2) = 1e-3;   % TBC thickness [m]
-
+SF = 1.5; % Same as everything
+dx(:,1) = cfg.tWall;   % wall thickness [m]
+dx(:,2) = best.tTBC*SF;   % TBC thickness [m]
+mDot = 3; % [kg/s] obtained for mas q_dot and a temp raise of 80 degrees in bulk as first approach
 q  = zeros(N-1,1); % Heat flux at each section
 
 T(1, end) = cooling(end).temperature; % Initial guess for water temperature at inlet

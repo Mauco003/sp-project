@@ -1,4 +1,4 @@
-function best = thermalModelDesign2(propellant, nozzle, performance, cooling, constants, options)
+function design = thermalModelDesign2(propellant, nozzle, performance, cooling, constants, options)
 
 arguments
     propellant struct
@@ -29,10 +29,10 @@ for THot_design = cfg.THot_min : cfg.dTHot : cfg.THot_max
     candidate = evaluateCandidate(THot_design, stations, cfg);
 
     if candidate.feasible
-        best = fillBestWithCandidate(best, candidate, cfg);
+        design = fillBestWithCandidate(design, candidate, cfg);
         break
     else
-        best.lastFail = candidate.failInfo;
+        design.lastFail = candidate.failInfo;
     end
 end
 
@@ -40,7 +40,7 @@ end
 % 4) Summary
 % -------------------------------------------------------------------------
 if options.showSummary
-    printSummary(best);
+    printSummary(design);
 end
 
 end
@@ -51,6 +51,10 @@ end
 %% =========================================================================
 function cfg = getModelConfig(nozzle, performance, cooling)
 
+% this values are needed for recovery factor and Bartz correlation, as the
+% total temperature has been found to increment using the CEA code we hard
+% code it as the one in the combustion chamber
+
 cfg.pc = 70e5;                 % [Pa] HARD CODED
 cfg.T0 = 2342.92;              % [K]  HARD CODED
 
@@ -60,19 +64,21 @@ cfg.Dt = 2*sqrt(cfg.At/pi);
 cfg.rCurvature = nozzle.rCurvature;
 cfg.cStar = performance.cstar;
 
-cfg.tWall = 1e-3;              % [m]
+% pressure at e=2 * Diam at e = 2 /(2*YS inconel worst value, 600 MPa)* 1.5 SF[m]
+inconelYS = 600e6;
+cfg.tWall = 65e5*sqrt(2*cfg.At/pi)/inconelYS*1.5;              
 
-cfg.kTBC   = 1;                % [W/m/K]
-cfg.kMetal = 22;               % [W/m/K]
+cfg.kTBC   = 0.9;                % YSZ [W/m/K]
+cfg.kMetal = 24.2;               % INCONEL [W/m/K]
 
-cfg.Thm_max = 1800 + 273.15;   % [K]
-cfg.Tcw_max = 150  + 273.15;   % [K]
+cfg.Thm_max = 1000 + 273.15;   % [K] max of the inconel
+cfg.Tcw_max = 150  + 273.15;   % [K] % Boiling point of water
 
 if isfield(cooling, 'Tboil')
     cfg.Tcw_max = cooling.Tboil;
 end
 
-cfg.THot_min = 1500;           % [K]
+cfg.THot_min = 1000;           % [K]
 cfg.THot_max = 2400;           % [K]
 cfg.dTHot    = 10;             % [K]
 
@@ -90,8 +96,8 @@ end
 %% =========================================================================
 function stations = buildStationsFromCEA(pc, epsilonList, stationNames)
 
-[~, GasCEA_2]  = getThermoProfileCEA(80, 20, pc/1e5, 2.0, 2.0);
-[~, GasCEA_15] = getThermoProfileCEA(80, 20, pc/1e5, 1.5, 1.5);
+[~, GasCEA_2]  = getThermoProfileCEA_froz(80, 20, pc/1e5, 2.0, 2.0);
+[~, GasCEA_15] = getThermoProfileCEA_froz(80, 20, pc/1e5, 1.5, 1.5);
 
 gammaVals = [GasCEA_2.gamma(1),     GasCEA_15.gamma(1),     GasCEA_2.gamma(2),     GasCEA_15.gamma(3),     GasCEA_2.gamma(3)];
 TVals     = [GasCEA_2.T(1),         GasCEA_15.T(1),         GasCEA_2.T(2),         GasCEA_15.T(3),         GasCEA_2.T(3)];
@@ -99,7 +105,7 @@ muVals    = [GasCEA_2.viscosity(1), GasCEA_15.viscosity(1), GasCEA_2.viscosity(2
 cpVals    = [GasCEA_2.cp(1),        GasCEA_15.cp(1),        GasCEA_2.cp(2),        GasCEA_15.cp(3),        GasCEA_2.cp(3)];
 prVals    = [GasCEA_2.prandtl(1),   GasCEA_15.prandtl(1),   GasCEA_2.prandtl(2),   GasCEA_15.prandtl(3),   GasCEA_2.prandtl(3)];
 machVals  = [GasCEA_2.Mach(1),      GasCEA_15.Mach(1),      GasCEA_2.Mach(2),      GasCEA_15.Mach(3),      GasCEA_2.Mach(3)];
-
+% get also pressure for the thicknes
 n = numel(epsilonList);
 
 stations = repmat(struct( ...

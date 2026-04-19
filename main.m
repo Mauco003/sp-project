@@ -61,5 +61,12 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
     propellant, performanceNom, nozzle, grain, constants);
 
 %% Nozzle cooling
-best = thermalModelMaggi(propellant, nozzle, ...
+
+% OBTAIN THICKNESS OF TBC BASED ON ENGINEERING CHOICES THAT MAKE FUCKING
+% SENSE
+design = thermalModelDesign2(propellant, nozzle, performance, cooling, constants);
+out = nozzleThermalModel2(design,input,propellant, nozzle, ...
     performance, cooling, constants,"showSummary",true);
+
+% USE SUCH THICKNESS TO SIMULATE THE FLOW
+
