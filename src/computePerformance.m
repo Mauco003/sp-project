@@ -59,12 +59,11 @@ function [t, performance, grain] = computePerformance(a, n, propellant, performa
     performance.mDot = mDot;
     performance.ve = ve;
     performance.pc = pc;
-    performance.pe = exit_data.pressure(i);
-    %performance.Mcc = Mcc;
+    performance.pe = exit_data.pressure;
     performance.Me = exit_data.mach;
     performance.rb = rb;
-    performance.cstar = exit_data.cstar(i);
-    performance.ct = exit_data.cf(i);
+    performance.cstar = exit_data.cstar;
+    performance.ct = exit_data.cf;
     
     grain.dInt = 2*rInt;
     grain.Ab = Ab;
