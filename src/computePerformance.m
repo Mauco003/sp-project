@@ -32,29 +32,28 @@ function [t, performance, grain] = computePerformance(a, n, propellant, performa
     N = length(t);
 
     for i=1:N
-    temp_exit = getExitCEA(propellant.wtAP,propellant.wtHTPB, pc(i)*1e-5, nozzle.epsilon);
-    exit_data.pressure(i) = temp_exit.pressure;               %needs BAR
-    exit_data.mach(i)     = temp_exit.mach;
-    exit_data.cf(i)       = temp_exit.cf;
-    exit_data.cstar(i)    = temp_exit.cstar;
+        temp_exit = getExitCEA(propellant.wtAP,propellant.wtHTPB, pc(i)*1e-5, nozzle.epsilon);
+        exit_data.pressure(i) = temp_exit.pressure;               %needs BAR
+        exit_data.mach(i)     = temp_exit.mach;
+        exit_data.cf(i)       = temp_exit.cf;
+        exit_data.cstar(i)    = temp_exit.cstar;
     end
-  
 
     cfMomId = exit_data.cf;
 
     cfMom = cfMomId .* lambda .* options.etaF;
-    cfStatic = (exit_data.pressure'-constants.pAmb*eye(N,1))./pc * nozzle.epsilon;
+    cfStatic = (exit_data.pressure'-constants.pAmb)./pc * nozzle.epsilon;
     cf = cfMom' + cfStatic;
 
     cstar = exit_data.cstar;
 
-    thrust = mDot .* cstar' .* cf;
+    T = mDot .* cstar' .* cf;
     Isp = (cstar .* cf) ./ constants.g0;
 
     ve = cstar .* cfMom;
     
     performance.t = t;
-    performance.thrust = thrust;
+    performance.thrust = T;
     performance.Isp = Isp;
     performance.mDot = mDot;
     performance.ve = ve;

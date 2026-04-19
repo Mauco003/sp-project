@@ -46,12 +46,8 @@ mPTot = performanceNom.mDot*input.burningTime;                                  
 grain = grainConfiguration(rbNominal, input.burningTime, mPTot, propellant.cea);
 if plotFlag, plotHollowCylinder(grain); end
 
-% Nozzle geometry (conical) sizing
-%
-rcc = grain.dExt0 / 2;                                                       % Chamber radius from grain OD
-
 % Conical nozzleDesign
-nozzle = nozzleDesign(AtIdeal, AeIdeal, rcc, ...
+nozzle = nozzleDesign(AtIdeal, AeIdeal, grain.dExt0 / 2, ...
                                     "alpha", 15 * pi/180, ...
                                     "beta", 30 * pi/180, "showSummary",true);
 

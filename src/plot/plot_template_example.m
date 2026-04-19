@@ -1,11 +1,11 @@
 clc
 clear all
 
-  p_chamber = 70; % bar
-  eps_inlet = 2.0 : -0.1 : 1.01;
-  eps_exit  = 1.1 : 0.1 : 2.0;
+p_chamber = 70; % bar
+eps_inlet = 2.0 : -0.1 : 1.01;
+eps_exit  = 1.1 : 0.1 : 2.0;
 
-  [Chamber, GasInfo] = getThermoProfileCEA_froz(80, 20, p_chamber, eps_inlet, eps_exit);
+[Chamber, GasInfo] = getThermoProfileCEA_froz(80, 20, p_chamber, eps_inlet, eps_exit);
  
 % PROFESSIONAL PLOTTING (T vs eps) - 
 
