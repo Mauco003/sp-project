@@ -14,6 +14,7 @@ plotFlag = false;
 
 propellant = propellantConfig();
 cooling = coolingConfig(propellant);
+[casing, liner] = casingConfig();
 
 %% Configuraiton Data
 % Generic constants
@@ -54,14 +55,16 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, grain.dExt0 / 2, ...
     propellant, performanceNom, nozzle, grain, constants);
 
 %% Nozzle cooling
-
 % OBTAIN THICKNESS OF TBC BASED ON ENGINEERING CHOICES THAT MAKE FUCKING
 % SENSE
 design = thermalModelDesign2(propellant, nozzle, performanceCEA, cooling, constants);
 out = nozzleThermalModel2(design, input,propellant, nozzle, ...
     performanceCEA, cooling, constants,"showSummary",true);
 
-%% Plots
+%% Combustion chamber sizing
+cc = combustionChamberDesign(input, performanceNom, grain, nozzle, ...
+    propellant, casing, liner, constants);
 
+%% Plots
 if plotFlag, plotHollowCylinder(grain); end %#ok<UNRCH>
 if plotFlag, plotPerformance(performance, performanceCEA); end %#ok<UNRCH>

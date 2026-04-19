@@ -1,0 +1,18 @@
+function [casing, liner] = casingConfig()
+%CASINGCONFIG Summary of this function goes here
+%   Detailed explanation goes here
+casing.thermalConductivity = 42.7;  % Steel thermal conductivity
+casing.hoopStress = 460e6;          % update these w real vals
+casing.safetyFactor = 1.5;          % update w real values
+casing.TMax = 1432;
+casing.cost = 0.8;                  % [%/kg]
+casing.density = 7850;              % kg/m^3
+
+%%% Casing liner
+liner.thickness = 5e-3;
+liner.thermalConductivity = 0.225;
+liner.regressionRate = 0.225;       % kg/s*m^2
+liner.cost = 7;                     % [$/kg]
+liner.density = 1208;               % kg/m^3
+end
+
