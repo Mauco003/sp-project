@@ -70,15 +70,15 @@ pc = 70e5;
 casing = struct();
 casing.thickness = (pc*d_grain)/(2*hoopStress) * safetyFactor;
 casing.thermalConductivity = 42.7;
-casing.TMax = 2000;
+casing.TMax = 1432;
 casing.cost = 0.8;        % [cost per kg]
 casing.density = 7850;   % kg/m^3
 
 %% LINER
 liner = struct();
-liner.thickness = 50;
+liner.thickness = 5e-3;
 liner.thermalConductivity = 0.225;
-liner.regressionRate = 0.225;         % g/s*m^2
+liner.regressionRate = 0.225;         % kg/s*m^2
 liner.cost = 7;         % [cost per kg]
 liner.density = 1208;   % kg/m^3
 
@@ -89,30 +89,10 @@ iter = 100;
 wMass = 1;
 wCost = 1;
 
-%% ITERATIVE FOR LOOP FOR THICKNESSES
-% for i = 1:iter
-% 
-%     % guess for liner thickness
-%     t_mid = (t_low + t_high)/2;
-%     liner.thickness = t_mid;
-% 
-%     % check if the thickness is optimal
-%     results = combustionChamber(casing, liner, nozzle, propellant, performance, constants);
-% 
-%     % adjust value of liner thickness
-%     if results.casingSurvives
-%         t_high = t_mid;
-%     else
-%         t_low = t_mid;
-%     end
-% end
-% 
-% t_opt = t_high;
-
-
+%% optimization loop
 % ranges to search
-tL_vals = linspace(1e-3, 100e-3, 10000);   % liner thickness [m]
-tC_vals = linspace(casing.thickness, 10000e-3, 10000);   % casing thickness [m]
+tL_vals = linspace(1e-5, 5e-2, 100);   % liner thickness [m]
+tC_vals = linspace(casing.thickness, 20e-2, 100);   % casing thickness [m]
 
 best.J = 1000000000000;
 
@@ -146,3 +126,9 @@ for i = 1:length(tL_vals)
         end
     end
 end
+
+
+
+% liner nozzle thickness
+t_burn = 25; 
+t_liner_nozzle = (liner.regressionRate / liner.density * t_burn)*2;

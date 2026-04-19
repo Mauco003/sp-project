@@ -127,7 +127,7 @@ else
 end
 
 % Next check lining exists for the entire burn time
-linerConsumed = liner.regressionRate / liner.density * t_burn;   % [m]
+linerConsumed = (liner.regressionRate / liner.density * t_burn)*2.5;   % [m]
 liner.survival = t_liner > linerConsumed;
 
 if liner.survival
@@ -149,15 +149,5 @@ results.hg = hg;
 
 results.casingSurvives = casing.survival;
 results.linerSurvives = liner.survival;
-
-%% Plotting results
-if options.makePlot
-
-end
-
-if options.showSummary
-
-end
-
 
 end
