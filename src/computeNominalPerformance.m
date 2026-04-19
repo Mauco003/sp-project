@@ -1,4 +1,4 @@
-function [performanceNom, At, Ae] = performanceNomCalc(thrust, tc, pc, pe, gamma, molarMass, constants, options)
+function [performanceNom, At, Ae] = computeNominalPerformance(thrust, tc, pc, pe, gamma, molarMass, constants, options)
 %PERFORMANCENOMCALC Computes nominal performance and required throat/exit areas
 %
 arguments

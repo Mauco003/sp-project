@@ -1,4 +1,4 @@
-function grain = grainConfiguration(rbNominal, burningTime, mPTot, cea)
+function grain = grainDesign(rbNominal, burningTime, mPTot, cea)
 
     web = rbNominal*burningTime;
     Vprop = mPTot/cea.rhoP;

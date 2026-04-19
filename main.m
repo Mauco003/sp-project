@@ -20,11 +20,11 @@ cooling = coolingConfig(propellant);
 constants = Constants();
 
 % Requirements / design point
-input.thrust = 100000;                                                            % [N]
-input.totaImpulse = 2.5e6;                                                       % [N s]
-input.burningTime = input.totaImpulse/input.thrust;                                          % [s]
-input.pcNominal = 70e5;                                                                  % [Pa]
-input.peNominal = constants.pAmb;                                                        % [Pa] (nozzle optimal at sea level)
+input.thrust = 100000;                                                     % [N]
+input.totaImpulse = 2.5e6;                                                 % [N s]
+input.burningTime = input.totaImpulse/input.thrust;                        % [s]
+input.pcNominal = 70e5;                                                    % [Pa]
+input.peNominal = constants.pAmb;                                          % [Pa] (nozzle optimal at sea level)
 
 % Area ratios (wrt At) from which to which there is active cooling
 coolARatios = [2, 2];                                            
@@ -33,18 +33,16 @@ coolARatios = [2, 2];
 % Vieille's law
 [a, aSigma, n, nSigma, R2] = uncertaintyVieille(propellant.ccPressure, propellant.burnRate);
 
-rbNominal = a*input.pcNominal^n;                                                         % Burning rate with nominal chamber pressure [mm/s]
+rbNominal = a*input.pcNominal^n;                                           % Burning rate with nominal chamber pressure [mm/s]
 
 
 %% Ideal thermodynamics & mass sizing
-[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
-mPTot = performanceNom.mDot*input.burningTime;                                          % Total propellant mass [kg]
-
+[performanceNom, AtIdeal, AeIdeal] = computeNominalPerformance(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
+mPTot = performanceNom.mDot*input.burningTime;                             % Total propellant mass [kg]
 
 %% BATES motor desing
 % Grain sizing (using Richard Nakka formulation)
-grain = grainConfiguration(rbNominal, input.burningTime, mPTot, propellant.cea);
-if plotFlag, plotHollowCylinder(grain); end
+grain = grainDesign(rbNominal, input.burningTime, mPTot, propellant.cea);
 
 % Conical nozzleDesign
 nozzle = nozzleDesign(AtIdeal, AeIdeal, grain.dExt0 / 2, ...
@@ -64,5 +62,6 @@ design = thermalModelDesign2(propellant, nozzle, performance, cooling, constants
 out = nozzleThermalModel2(design, input,propellant, nozzle, ...
     performance, cooling, constants,"showSummary",true);
 
-% USE SUCH THICKNESS TO SIMULATE THE FLOW
+%% Plots
 
+if plotFlag, plotHollowCylinder(grain); end %#ok<UNRCH>
