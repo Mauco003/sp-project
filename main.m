@@ -49,19 +49,19 @@ nozzle = nozzleDesign(AtIdeal, AeIdeal, grain.dExt0 / 2, ...
                                     "alpha", 15 * pi/180, ...
                                     "beta", 30 * pi/180, "showSummary",true);
 
-
 %% Combustion chamber / Internal Ballistics (Real Performance)
-[t, performance, grain] = computePerformance(a, n, ...
+[t, performance, performanceCEA, grain] = computePerformance(a, n, ...
     propellant, performanceNom, nozzle, grain, constants);
 
 %% Nozzle cooling
 
 % OBTAIN THICKNESS OF TBC BASED ON ENGINEERING CHOICES THAT MAKE FUCKING
 % SENSE
-design = thermalModelDesign2(propellant, nozzle, performance, cooling, constants);
+design = thermalModelDesign2(propellant, nozzle, performanceCEA, cooling, constants);
 out = nozzleThermalModel2(design, input,propellant, nozzle, ...
-    performance, cooling, constants,"showSummary",true);
+    performanceCEA, cooling, constants,"showSummary",true);
 
 %% Plots
 
 if plotFlag, plotHollowCylinder(grain); end %#ok<UNRCH>
+if plotFlag, plotPerformance(performance, performanceCEA); end %#ok<UNRCH>

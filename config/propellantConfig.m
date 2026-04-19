@@ -26,6 +26,7 @@ propellant.p_chamber = 70; % bar
 propellant.cea.gamma = Chamber.gamma;                                            % Specific heat ratio [-]
 propellant.cea.ccTemperature = Chamber.T;                                           % Chamber temperature [K]
 propellant.cea.molarMass = Chamber.molar_mass;
+propellant.cea.R = constants.R / Chamber.molar_mass;
 propellant.cea.cp = Chamber.cp;                                                   % [J/kg/K]
 propellant.cea.mu = Chamber.viscosity;       % [Pa*s]
 propellant.cea.k  = Chamber.conductivity;       % [W/m*K] Steady state heat conductivity
