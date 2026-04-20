@@ -22,7 +22,7 @@ stations = buildStationsFromCEA(cfg.pc, cfg.stationEps, cfg.stationNames);
 %% ------------------------------------------------------------------------
 % 3) Search feasible THot_design
 % -------------------------------------------------------------------------
-best = initializeBest(cfg);
+design = initializeBest(cfg);
 
 for THot_design = cfg.THot_min : cfg.dTHot : cfg.THot_max
 
@@ -37,7 +37,56 @@ for THot_design = cfg.THot_min : cfg.dTHot : cfg.THot_max
 end
 
 %% ------------------------------------------------------------------------
-% 4) Summary
+% 4) Plot: outlet water temperature vs mass flow (constant qDot = qDotMax)
+% -------------------------------------------------------------------------
+if design.found
+
+    mFlow = 1:10;          % [kg/s]
+    Tini_C = 18;           % [°C]
+    ceWater = 4180;        % [J/kg/K]
+
+    qDot = design.maxQDot; % [W/m^2]
+    A = 61268.71789e-6;    % [m^2]
+
+    Tfinal_C = Tini_C + (qDot * A) ./ (mFlow * ceWater);
+
+    saveDir = 'C:\Users\celia\Desktop\figuras_cooling';
+    legendFontSize = 18;
+
+    if ~exist(saveDir, 'dir')
+        mkdir(saveDir);
+    end
+
+    fig = figure('Color', 'w', 'Position', [100, 100, 850, 520], ...
+                 'Name', 'water-outlet-temperature-vs-mass-flow-design-MAX');
+    hold on;
+
+    plot(mFlow, Tfinal_C, '-', ...
+        'Color', [0.65 0.65 0.65], 'LineWidth', 1.5, ...
+        'HandleVisibility', 'off');
+
+    plot(mFlow, Tfinal_C, 'o', ...
+        'MarkerEdgeColor', [0.2 0.2 0.2], ...
+        'MarkerFaceColor', [0 0.4470 0.7410], ...
+        'MarkerSize', 8, 'LineWidth', 1.0, ...
+        'DisplayName', 'Constant q'''' = q''''_{max}');
+
+    xlabel('Water mass flow [kg/s]', ...
+        'FontName', 'Times New Roman', 'FontSize', 12, 'FontWeight', 'bold');
+    ylabel('Outlet water temperature [^\circC]', ...
+        'FontName', 'Times New Roman', 'FontSize', 12, 'FontWeight', 'bold');
+
+    formatAcademicAxes(gca);
+
+    %lgd = legend('Location', 'best', 'Box', 'on', ...
+        %'FontName', 'Times New Roman', 'FontSize', legendFontSize);
+    %lgd.AutoUpdate = 'off';
+
+    saveFigureAuto(fig, saveDir, 'water-outlet-temperature-vs-mass-flow-design');
+end
+
+%% ------------------------------------------------------------------------
+% 5) Summary
 % -------------------------------------------------------------------------
 if options.showSummary
     printSummary(design);
@@ -51,12 +100,8 @@ end
 %% =========================================================================
 function cfg = getModelConfig(nozzle, performance, cooling)
 
-% this values are needed for recovery factor and Bartz correlation, as the
-% total temperature has been found to increment using the CEA code we hard
-% code it as the one in the combustion chamber
-
-cfg.pc = 70e5;                 % [Pa] HARD CODED
-cfg.T0 = 2342.92;              % [K]  HARD CODED
+cfg.pc = 70e5;                 
+cfg.T0 = 2342.92;              
 
 cfg.At = nozzle.At;
 cfg.Dt = 2*sqrt(cfg.At/pi);
@@ -64,26 +109,25 @@ cfg.Dt = 2*sqrt(cfg.At/pi);
 cfg.rCurvature = nozzle.rCurvature;
 cfg.cStar = performance.cstar;
 
-% pressure at e=2 * Diam at e = 2 /(2*YS inconel worst value, 600 MPa)* 1.5 SF[m]
 inconelYS = 600e6;
 cfg.tWall = 65e5*sqrt(2*cfg.At/pi)/inconelYS*1.5;              
 
-cfg.kTBC   = 0.9;                % YSZ [W/m/K]
-cfg.kMetal = 24.2;               % INCONEL [W/m/K]
+cfg.kTBC   = 0.9;               
+cfg.kMetal = 24.2;              
 
-cfg.Thm_max = 1000 + 273.15;   % [K] max of the inconel
-cfg.Tcw_max = 150  + 273.15;   % [K] % Boiling point of water
+cfg.Thm_max = 1000 + 273.15;   
+cfg.Tcw_max = 150  + 273.15;   
 
 if isfield(cooling, 'Tboil')
     cfg.Tcw_max = cooling.Tboil;
 end
 
-cfg.THot_min = 1000;           % [K]
-cfg.THot_max = 2400;           % [K]
-cfg.dTHot    = 10;             % [K]
+cfg.THot_min = 1000;           
+cfg.THot_max = 2400;           
+cfg.dTHot    = 10;             
 
-cfg.tTBC_min = 100e-6;         % [m]
-cfg.tTBC_max = 600e-6;         % [m]
+cfg.tTBC_min = 100e-6;         
+cfg.tTBC_max = 600e-6;         
 
 cfg.stationEps   = [2, 1.5, 1, 1.5, 2];
 cfg.stationNames = {'Inlet e=2','Conv e=1.5','Throat','Div e=1.5','Exit e=2'};
@@ -105,7 +149,7 @@ muVals    = [GasCEA_2.viscosity(1), GasCEA_15.viscosity(1), GasCEA_2.viscosity(2
 cpVals    = [GasCEA_2.cp(1),        GasCEA_15.cp(1),        GasCEA_2.cp(2),        GasCEA_15.cp(3),        GasCEA_2.cp(3)];
 prVals    = [GasCEA_2.prandtl(1),   GasCEA_15.prandtl(1),   GasCEA_2.prandtl(2),   GasCEA_15.prandtl(3),   GasCEA_2.prandtl(3)];
 machVals  = [GasCEA_2.Mach(1),      GasCEA_15.Mach(1),      GasCEA_2.Mach(2),      GasCEA_15.Mach(3),      GasCEA_2.Mach(3)];
-% get also pressure for the thicknes
+
 n = numel(epsilonList);
 
 stations = repmat(struct( ...
@@ -143,7 +187,6 @@ candidate = initializeCandidate(THot_design);
 
 for i = 1:nStations
 
-    % 1) Size thickness at current station
     [ok, tReq, ~, failReason] = findThicknessAtStation(stations(i), THot_design, cfg);
 
     if ~ok
@@ -155,7 +198,6 @@ for i = 1:nStations
         return
     end
 
-    % 2) Check same thickness at next station
     if i < nStations
         nextRes = solveStation(stations(i+1), tReq, THot_design, cfg);
 
@@ -172,7 +214,6 @@ for i = 1:nStations
             return
         end
     else
-        % Last station: if it can be sized, accept it
         candidate.feasible      = true;
         candidate.tTBC          = tReq;
         candidate.criticalPhase = i;
@@ -205,7 +246,6 @@ resMax = solveStation(station, cfg.tTBC_max, THot_target, cfg);
 fMin = resMin.THot - THot_target;
 fMax = resMax.THot - THot_target;
 
-% THot increases with thickness for fixed cold-side temperature
 if fMin > 0
     tReq = cfg.tTBC_min;
     resReq = resMin;
@@ -377,7 +417,6 @@ best.lastFail = emptyFailInfo(NaN);
 
 end
 
-
 function best = fillBestWithCandidate(best, candidate, cfg)
 
 results = candidate.results;
@@ -420,7 +459,6 @@ best.Thm_max = cfg.Thm_max;
 best.Tcw_max = cfg.Tcw_max;
 
 end
-
 
 %% =========================================================================
 % Candidate helpers
@@ -505,4 +543,35 @@ if isempty(x)
 else
     val = min(x);
 end
+end
+function formatAcademicAxes(ax)
+
+set(ax, 'FontName', 'Times New Roman', ...
+        'FontSize', 12, ...
+        'LineWidth', 0.8, ...
+        'GridLineStyle', '--', ...
+        'GridAlpha', 0.30, ...
+        'Layer', 'top', ...
+        'Box', 'on');
+
+grid(ax, 'on');
+
+end
+function saveFigureAuto(figHandle, saveDir, fileName)
+
+if ~exist(saveDir, 'dir')
+    mkdir(saveDir);
+end
+
+pdfFile = fullfile(saveDir, [fileName '.pdf']);
+pngFile = fullfile(saveDir, [fileName '.png']);
+
+try
+    exportgraphics(figHandle, pdfFile, 'ContentType', 'vector');
+    exportgraphics(figHandle, pngFile, 'Resolution', 300);
+catch
+    print(figHandle, pdfFile, '-dpdf', '-bestfit');
+    print(figHandle, pngFile, '-dpng', '-r300');
+end
+
 end
