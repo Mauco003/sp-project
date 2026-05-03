@@ -1,4 +1,4 @@
-% MainMontecarlo - This script runs a Monte Carlo simulation to 
+% furtherMC - This script runs a Monte Carlo simulation to 
 %   analyze the performance of a rocket engine design under 
 %   varying conditions. 
 %
@@ -72,7 +72,7 @@ L_parete_div = L_div/cosd(alpha);
 delta_alpha = atand(delta_parete/L_parete_div);
 alphaSigma = delta_alpha/3;
 
-%% initializing the Monte Carlo simulation
+%% Initializing the Monte Carlo simulation
 
 iter = 100;
 uncFuncChoice = 2;
@@ -83,22 +83,26 @@ nNominal = n;
 
 switch uncFuncChoice
     case 1
-        % --- CASE 1: INDEPENDENT SAMPLING WITH MESHGRID ---
+        % Independent sampling with meshgrid
         [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         aSigmaMC = aSigmaMC * 1e-3/(10^(6*nNominal));
         
         aMCunshuffled = aNominal * ones(iter, 1) + randn(iter, 1) * aSigmaMC;
         nMCunshuffled = nNominal * ones(iter, 1) + randn(iter, 1) * nSigma;
         
-        % initializing the shuffle => incorporated with meshgrid
+        % Initializing the shuffle => incorporated with meshgrid
         [aMC_matrix, nMC_matrix] = meshgrid(aMCunshuffled, nMCunshuffled);
         
-        % flatten the matrices into 1D vectors
+        % Flatten the matrices into 1D vectors
         aMC_array = aMC_matrix(:);
         nMC_array = nMC_matrix(:);
         
     case 2
-        % --- CASE 2: CORRELATED MULTIVARIATE SAMPLING ---
+        % Correlated multivariate sampling
+        % The physics behind the problem teaches us that is nearly impossible having 
+        % propellant with combination of a and n s.t. the performace have maximum values 
+        % much much higher. The regression has a way of expressing the relation between 
+        % the two with the covariance. So this should be exploited ass well
         [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         
         % To match the size of the meshgrid output (iter * iter)
@@ -123,9 +127,8 @@ constantsMC = constants;
 nozzleMC = nozzle;
 grainMC = grain;
 
-% ---------------------------------------------------------
-% PRE-GENERATE ALL RANDOM INPUTS OUTSIDE THE LOOP (VECTORIZED)
-% ---------------------------------------------------------
+
+% Pre-generate all random inputs outside the loop (vectorized)
 aVec    = reshape(aMC_array, 1, mcmax);
 nVec    = reshape(nMC_array, 1, mcmax);
 OFVec   = OFNominal + randn(1, mcmax) * OFSigma;
@@ -154,7 +157,7 @@ deltatGuaranteedThrust = zeros(1,mcmax);
 %% Physics Execution Loop
 
 for index = 1:mcmax
-    % 1. Extract the pre-calculated random values for this iteration
+    % Extract the pre-calculated random values for this iteration
     aMc    = aVec(index);
     nMc    = nVec(index);
     OFMc   = OFVec(index);
@@ -168,7 +171,7 @@ for index = 1:mcmax
     LMc    = LVec(index);
     MpMc   = MpVec(index);
 
-    % 2. Setup the structures for this run
+    % Setup the structures for this run
     rB(index) = aMc * input.pcNominal^nMc;
 
     MOx = OFMc/(1 + OFMc);
@@ -186,13 +189,13 @@ for index = 1:mcmax
     grainMC.dInt0 = dintMc;
     grainMC.L0    = LMc;
 
-    % 3. Run computations
+    % Run computations
     [tMC_output, performanceMC_output, grainMC_output] = ...
         computePerformance(aMc, nMc, propellantMC, performanceNom, nozzleMC, grainMC, constantsMC);
 
     I_tot = trapz(tMC_output, performanceMC_output.thrust);
 
-    % 4. Store outputs
+    % Store outputs
     T_max(index) = max(performanceMC_output.thrust);
     T_avg(index) = mean(performanceMC_output.thrust);
     Isp_avg(index) = mean(performanceMC_output.Isp);
@@ -210,7 +213,7 @@ end
 
 %% Monte Carlo post-processing plots
 
-% -------- Summary statistics --------
+% Summary statistics
 fprintf('\nMonte Carlo summary (%d runs)\n', mcmax);
 fprintf('T_max   : mean = %.3f, std = %.3f\n', mean(T_max), std(T_max));
 fprintf('T_avg   : mean = %.3f, std = %.3f\n', mean(T_avg), std(T_avg));
@@ -219,7 +222,7 @@ fprintf('Isp_avg : mean = %.3f, std = %.3f\n', mean(Isp_avg), std(Isp_avg));
 fprintf('Impulse : mean = %.3f, std = %.3f\n', mean(Isp_tot_max), std(Isp_tot_max));
 fprintf('t_90%%   : mean = %.3f, std = %.3f\n', mean(deltatGuaranteedThrust), std(deltatGuaranteedThrust));
 
-% -------- 1) Histograms of main outputs --------
+% Histograms of main outputs
 figure('Name','Monte Carlo - Main Output Distributions');
 
 subplot(2,3,1)
@@ -260,21 +263,21 @@ title('\Delta t guaranteed thrust')
 
 sgtitle('Monte Carlo Output Distributions')
 
-% -------- 2) Burn-rate distribution --------
+% Burn-rate distribution
 figure('Name','Monte Carlo - Burn Rate');
 histogram(rB, 30)
 xlabel('Burn rate')
 ylabel('Count')
 title('Distribution of burn rate r_B')
 
-% -------- 3) Boxplots for quick comparison --------
+% Boxplots for quick comparison
 figure('Name','Monte Carlo - Boxplots');
 boxplot([T_max(:), T_avg(:), Isp_max(:), Isp_avg(:), Isp_tot_max(:), deltatGuaranteedThrust(:)], ...
     'Labels', {'Tmax','Tavg','Isp max','Isp avg','Impulse','t90%'})
 title('Monte Carlo output spread')
 ylabel('Value')
 
-% -------- 4) Sensitivity-style scatter plots --------
+% Sensitivity-style scatter plots
 
 if exist('aVec','var') && exist('OFVec','var') && exist('AtVec','var')
     figure('Name','Monte Carlo - Input/Output Sensitivity');
@@ -324,7 +327,7 @@ if exist('aVec','var') && exist('OFVec','var') && exist('AtVec','var')
     sgtitle('Monte Carlo Sensitivity Scatter Plots')
 end
 
-% -------- 5) Correlation matrix of main outputs --------
+% Correlation matrix of main outputs
 Y = [T_max(:), T_avg(:), Isp_max(:), Isp_avg(:), Isp_tot_max(:), deltatGuaranteedThrust(:)];
 R = corrcoef(Y, 'Rows', 'complete');
 
@@ -336,7 +339,7 @@ set(gca, 'XTick', 1:6, 'XTickLabel', {'Tmax','Tavg','Isp max','Isp avg','Impulse
 set(gca, 'YTick', 1:6, 'YTickLabel', {'Tmax','Tavg','Isp max','Isp avg','Impulse','t90%'})
 title('Correlation matrix of Monte Carlo outputs')
 
-% -------- 6) Normal probability plots (optional but useful) --------
+% Normal probability plots (optional but useful)
 figure('Name','Monte Carlo - Normality Check');
 
 subplot(2,2,1)

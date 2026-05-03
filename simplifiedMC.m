@@ -1,4 +1,4 @@
-% [name] - this script provides nominal performances computed through a
+% simplifiedMC - this script provides nominal performances computed through a
 % Monte Carlo simulation to consider uncertainties on the Vieille's law
 % parameters' uncertainty
 
@@ -13,8 +13,6 @@ clear; close all; clc
 % calling all the variables/structures coming from the main
 main;
 
-
-
 iter = 500;
 uncFuncChoice = 1;
 
@@ -24,26 +22,31 @@ nNom = n;
 %%
 switch uncFuncChoice
     case 1
-        % --- CASE 1: INDEPENDENT SAMPLING WITH MESHGRID ---
+        % Independent sampling with meshgrid
         [~, aSigmaMC, ~, nSigma, ~] = uncertaintyVieille(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         aSigmaMC = aSigmaMC * 1e-3/(10^(6*nNom));
         
         aMCunshuffled = aNom * ones(iter, 1) + randn(iter, 1) * aSigmaMC;
         nMCunshuffled = nNom * ones(iter, 1) + randn(iter, 1) * nSigma;
         
-        % initializing the shuffle => incorporated with meshgrid
+        % Initializing the shuffle => incorporated with meshgrid
         [aMC_matrix, nMC_matrix] = meshgrid(aMCunshuffled, nMCunshuffled);
         
-        % flatten the matrices into 1D vectors for the parfor loop
+        % Flatten the matrices into 1D vectors for the parfor loop
         aMC = aMC_matrix(:);
         nMC = nMC_matrix(:);
         
     case 2
-        % --- CASE 2: CORRELATED MULTIVARIATE SAMPLING ---
+        % Correlated multivariate sampling
+        % The physics behind the problem teaches us that is nearly impossible having 
+        % propellant with combination of a and n s.t. the performace have maximum values 
+        % much much higher. The regression has a way of expressing the relation between 
+        % the two with the covariance. So this should be exploited ass well
+
         [~, ~, ~, mu_qm, Sigma_qm] = uncertaintyVieilleDos(propellant.ccPressure * 1e-6, propellant.burnRate * 1e3);
         
-        % To match the size of the meshgrid output (iter * iter), we directly 
-        % draw that many samples from the correlated multivariate distribution.
+        % To match the size of the meshgrid output (iter * iter), directly 
+        % draw that many samples from the correlated multivariate distribution
         total_samples = iter^2; 
         samples_qm = mvnrnd(mu_qm, Sigma_qm, total_samples);
         
@@ -59,7 +62,7 @@ switch uncFuncChoice
 end
 
 
-%%
+%% Constants and pre-allocation of the results
 
 
 rhoP = propellant.cea.rhoP;
@@ -72,7 +75,7 @@ iterMC = numel(aMC);
 burntime = zeros(iterMC, 1);
 MEOP = zeros(iterMC, 1);
 
-%%
+%% Parallel for to fasten simulation time
 
 parfor index = 1:iterMC
     a = aMC(index);
@@ -82,8 +85,9 @@ parfor index = 1:iterMC
     MEOP(index) = max(p);
 end
 
-%%
+%% Extract statistical output from analysis
 
+% Mean and std
 meanBT = mean(burntime);
 stdBT = std(burntime);
 meanMEOP = mean(MEOP);
@@ -104,12 +108,12 @@ errorBTDevStd = abs(progBTDevStd - stdBT) / stdBT * 100;
 errorMEOPMean = abs(progMEOPMean - meanMEOP) / meanMEOP * 100;
 errorMEOPDevStd = abs(progMEOPDevStd - stdMEOP) / stdMEOP * 100;
 
-%% Plotting Relative Convergence
+%% Plotting relative convergence
 
 
 figure('Name', 'Relative Error Convergence Monitoring');
 
-% Burn Time Mean Error
+% Burn time mean error
 subplot(2, 2, 1);
 semilogy(1:iterMC-1, errorBTMean(1:end-1), 'b-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -117,7 +121,7 @@ ylabel('Relative Error (%)');
 title('Burn Time: Mean Convergence');
 grid on;
 
-% Burn Time Standard Deviation Error
+% Burn time standard deviation error
 subplot(2, 2, 2);
 semilogy(1:iterMC-1, errorBTDevStd(1:end-1), 'r-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -125,7 +129,7 @@ ylabel('Relative Error (%)');
 title('Burn Time: Std Dev Convergence');
 grid on;
 
-% MEOP Mean Error
+% MEOP mean error
 subplot(2, 2, 3);
 semilogy(1:iterMC-1, errorMEOPMean(1:end-1), 'b-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -133,7 +137,7 @@ ylabel('Relative Error (%)');
 title('MEOP: Mean Convergence');
 grid on;
 
-% MEOP Standard Deviation Error
+% MEOP standard deviation error
 subplot(2, 2, 4);
 semilogy(1:iterMC-1, errorMEOPDevStd(1:end-1), 'r-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -146,7 +150,7 @@ grid on;
 
 figure('Name', 'Convergence Monitoring');
 
-% Burn Time Mean
+% Burn time mean
 subplot(2, 2, 1);
 semilogy(1:iterMC, progBTMean, 'b-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -154,7 +158,7 @@ ylabel('Burn Time (s)');
 title('Mean Burn Time');
 grid on;
 
-% Burn Time Standard Deviation
+% Burn time standard deviation
 subplot(2, 2, 2);
 plot(1:iterMC, progBTDevStd, 'r-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -162,7 +166,7 @@ ylabel('\sigma Burn Time (s)');
 title('Standard Deviation of Burn Time');
 grid on;
 
-% MEOP Mean
+% MEOP mean
 subplot(2, 2, 3);
 plot(1:iterMC, progMEOPMean, 'b-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -170,7 +174,7 @@ ylabel('MEOP (Pa)');
 title('Mean MEOP');
 grid on;
 
-% MEOP Standard Deviation
+% MEOP standard deviation
 subplot(2, 2, 4);
 plot(1:iterMC, progMEOPDevStd, 'r-', 'LineWidth', 1.5);
 xlabel('Iteration');
@@ -222,41 +226,3 @@ else
     meanMEOPSens2 = mean(MEOPSens2);
     stdMEOPSens2 = std(MEOPSens2);
 end
-
-
-% %% sensitivity analysis
-% % changing a, constant n
-% aMCSens1 = aMC;
-% burntimeSens1 = zeros(iterMC, 1);
-% MEOPSens1 = zeros(iterMC, 1);
-% 
-% parfor index = 1:iterMC
-%     a = aMCSens1(index);
-%     n = nNom;
-%     [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
-%     burntimeSens1(index) = max(t);
-%     MEOPSens1(index) = max(p);
-% end
-% 
-% meanBTSens1 = mean(burntimeSens1);
-% stdBTSens1 = std(burntimeSens1);
-% meanMEOPSens1 = mean(MEOPSens1);
-% stdMEOPSens1 = std(MEOPSens1);
-% 
-% %% changing n, constant a
-% nMCSens2 = nMC;
-% burntimeSens2 = zeros(iterMC, 1);
-% MEOPSens2 = zeros(iterMC, 1);
-% 
-% parfor index = 1:iterMC
-%     a = aMCSens2(index);
-%     n = nNom;
-%     [t, p, rb] = computeBurn(a, n, rhoP, cStar, grain, Athroat);
-%     burntimeSens2(index) = max(t);
-%     MEOPSens2(index) = max(p);
-% end
-% 
-% meanBTSens2 = mean(burntimeSens2);
-% stdBTSens2 = std(burntimeSens2);
-% meanMEOPSens2 = mean(MEOPSens2);
-% stdMEOPSens2 = std(MEOPSens2);
