@@ -1,18 +1,20 @@
 function M = machFromAreaRatio(areaRatio, gamma, branch)
-% MACHFROMAREARATIO
-% Computes Mach number from isentropic area ratio A/A*
+% machFromAreaRatio - Computes Mach number from isentropic area ratio A/A*
 %
-% Inputs:
-%   areaRatio : area ratio A/A*  (must be >= 1)
-%   gamma     : ratio of specific heats
-%   branch    : 'subsonic' or 'supersonic'
+% SYNTAX:
+%  M = machFromAreaRatio(areaRatio, gamma, branch)
 %
-% Output:
-%   M         : Mach number
+% INPUT:
+%  areaRatio - area ratio A/A*  (must be >= 1)
+%  gamma     - ratio of specific heats
+%  branch    - 'subsonic' or 'supersonic'
+%
+% OUTPUT:
+%  M         - Mach number
 %
 % Example:
-%   Msub = machFromAreaRatio(2.5, 1.4, 'subsonic');
-%   Msup = machFromAreaRatio(2.5, 1.4, 'supersonic');
+%  Msub = machFromAreaRatio(2.5, 1.4, 'subsonic');
+%  Msup = machFromAreaRatio(2.5, 1.4, 'supersonic');
 
     if areaRatio < 1
         error('areaRatio must be >= 1');

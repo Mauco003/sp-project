@@ -1,4 +1,4 @@
-function [a, Inc_a, n, Inc_n, R2] = Uncertainty(p, rb)
+function [a, Inc_a, n, Inc_n, R2] = uncertaintyVieille(p, rb)
 
 %
 % Originall file Incertezze.m V 1.02

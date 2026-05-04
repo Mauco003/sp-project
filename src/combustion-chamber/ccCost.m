@@ -1,6 +1,5 @@
 function  [J, massTotal, costTotal] = ccCost(liner, casing, wMass, wCost)
-%% -----------------------------------------------------------------------
-% Function to evaluate the weighted cost-mass objective function for the
+% ccCost - Function to evaluate the weighted cost-mass objective function for the
 % combustion chamber sizing optimization.
 %
 % The combustion chamber is approximated as a cylindrical structure
@@ -14,7 +13,7 @@ function  [J, massTotal, costTotal] = ccCost(liner, casing, wMass, wCost)
 %   - estimated material costs
 %   - a normalized weighted objective function used for optimization
 %
-% INPUTS:
+% INPUT:
 %   liner  - struct containing liner properties
 %       .thickness     [m]    liner thickness
 %       .density       [kg/m^3]
@@ -29,7 +28,7 @@ function  [J, massTotal, costTotal] = ccCost(liner, casing, wMass, wCost)
 %
 %   wCost  - weighting coefficient for total cost objective [-]
 %
-% OUTPUTS:
+% OUTPUT:
 %   J           - normalized weighted objective function [-]
 %
 %   massTotal   - total combustion chamber mass [kg]
@@ -53,36 +52,34 @@ function  [J, massTotal, costTotal] = ccCost(liner, casing, wMass, wCost)
 % EXAMPLE USAGE:
 %
 %   [J, m, c] = ccCost(liner, casing, 1, 1);
-%
-%------------------------------------------------------------------------
 
-%% defining constants
-% geometry of grain
-d_grain = 0.89;
-r_grain = d_grain/2;
-l_grain = 1.58;
+    %% defining constants
+    % geometry of grain
+    d_grain = 0.89;
+    r_grain = d_grain/2;
+    l_grain = 1.58;
 
-% thickness parameters
-t_liner  = liner.thickness;   % [m]
-t_casing = casing.thickness;  % [m]
+    % thickness parameters
+    t_liner  = liner.thickness;   % [m]
+    t_casing = casing.thickness;  % [m]
 
-% to normalize the cost and mass for optimization
-massRef = 100;     % kg
-costRef = 1000;    % €
+    % to normalize the cost and mass for optimization
+    massRef = 100;     % kg
+    costRef = 1000;    % €
 
-%% getting volumes of each
-v_liner = pi*((r_grain + t_liner)^2 - r_grain^2)*l_grain;
-v_casing = pi*((r_grain + t_liner + t_casing)^2 - (r_grain + t_liner)^2)*l_grain;
+    %% getting volumes of each
+    v_liner = pi*((r_grain + t_liner)^2 - r_grain^2)*l_grain;
+    v_casing = pi*((r_grain + t_liner + t_casing)^2 - (r_grain + t_liner)^2)*l_grain;
 
-%% masses
-mass_liner = liner.density * v_liner;
-mass_casing = casing.density * v_casing;
+    %% masses
+    mass_liner = liner.density * v_liner;
+    mass_casing = casing.density * v_casing;
 
-%% defining the cost model
-costTotal = liner.cost * mass_liner + casing.cost * mass_casing;
-massTotal = mass_liner + mass_casing;
+    %% defining the cost model
+    costTotal = liner.cost * mass_liner + casing.cost * mass_casing;
+    massTotal = mass_liner + mass_casing;
 
-% weigted combination 
-J = wMass * (massTotal / massRef) + wCost * (costTotal / costRef);
+    % weigted combination 
+    J = wMass * (massTotal / massRef) + wCost * (costTotal / costRef);
 
 end

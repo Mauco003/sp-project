@@ -1,119 +1,138 @@
 function nozzle = nozzleDesign(At, Ae, rcc, options)
-%NOZZLEDESIGN Computes axisymmetric conical nozzle geometry
+% nozzleDesign - Computes axisymmetric conical nozzle geometry
 %
-arguments
-    At
-    Ae
-    rcc
-    options.alpha = 15 * pi/180
-    options.beta  = 30 * pi/180
-    options.lambdaDiv = []
-    options.plot = false
-    options.showSummary = false
-end
+% SYNTAX:
+%  nozzle = nozzleDesign(At, Ae, rcc, options)
+%
+% INPUTS:
+%  At           - Throat area [m^2]
+%  Ae           - Exit area [m^2]
+%  rcc          - Combustion chamber radius [m]
+%  options      - Optional parameters (struct):
+%                   .alpha: Divergence half-angle [rad] (default: 15 deg)
+%                   .beta: Convergent half-angle [rad] (default: 30 deg)
+%                   .lambdaDiv: Area ratio at which divergence starts (default: computed from alpha)
+%                   .plot: Flag to plot nozzle geometry (default: false)
+%                   .showSummary: Flag to print design summary (default: false)
+%
+% OUTPUTS:
+%  nozzle       - Struct containing nozzle geometry and parameters
 
-%% Defaults / optional inputs
-if ~isempty(options.lambdaDiv)
-    alpha = acos(2*options.lambdaDiv - 1);
-else
-    alpha = options.alpha;
-    lambdaDiv = (1 + cos(alpha))/2;
-end
 
-beta = options.beta;
+    arguments
+        At
+        Ae
+        rcc
+        options.alpha = 15 * pi/180
+        options.beta  = 30 * pi/180
+        options.lambdaDiv = []
+        options.plot = false
+        options.showSummary = false
+    end
 
-rt = sqrt(At/pi);
-re = sqrt(Ae/pi);
+    % Defaults / optional inputs
+    if ~isempty(options.lambdaDiv)
+        alpha = acos(2*options.lambdaDiv - 1);
+    else
+        alpha = options.alpha;
+        lambdaDiv = (1 + cos(alpha))/2;
+    end
 
-% Chamber area
-Acc = pi * rcc^2;
+    beta = options.beta;
 
-% Conical divergence length
-lDiv = (re - rt) / tan(alpha);
+    rt = sqrt(At/pi);
+    re = sqrt(Ae/pi);
 
-% Convergent section length
-lConv = (rcc - rt) / tan(beta);
+    % Chamber area
+    Acc = pi * rcc^2;
 
-% Geometry by nozzle type
-lTotal = lConv + lDiv;
+    % Conical divergence length
+    lDiv = (re - rt) / tan(alpha);
 
-% Simple piecewise geometry for plotting
-xConv = linspace(-lConv, 0, 100);
-rConv = linspace(rcc, rt, 100);
+    % Convergent section length
+    lConv = (rcc - rt) / tan(beta);
 
-xDiv = linspace(0, lDiv, 150);
-rDiv = linspace(rt, re, 150);
+    % Geometry by nozzle type
+    lTotal = lConv + lDiv;
 
-x = [xConv, xDiv];
-r = [rConv, rDiv];
+    % Simple piecewise geometry for plotting
+    xConv = linspace(-lConv, 0, 100);
+    rConv = linspace(rcc, rt, 100);
 
-% Exporting data
-nozzle.x = [0, lConv, lTotal];
-nozzle.r = [rcc, rt, re];
+    xDiv = linspace(0, lDiv, 150);
+    rDiv = linspace(rt, re, 150);
 
-nozzle.Acc = Acc;
-nozzle.At = At;
-nozzle.Ae = Ae;
-nozzle.epsilon = Ae/At;
-nozzle.rCurvature = 1; % I added radius of curvature of throat
+    x = [xConv, xDiv];
+    r = [rConv, rDiv];
 
-nozzle.alpha = options.alpha;
-nozzle.beta  = options.beta;
 
-nozzle.lConv = lConv;
-nozzle.lDiv  = lDiv;
+    % Exporting data
+    nozzle.x = [0, lConv, lTotal];
+    nozzle.r = [rcc, rt, re];
 
-% Plot
-if options.plot
-    figure;
-    plot(x,  r, 'LineWidth', 1.5); hold on;
-    plot(x, -r, 'LineWidth', 1.5);
-    axis equal;
-    grid on;
-    xlabel('x [m]');
-    ylabel('r [m]');
-    title('Axisymmetric conical nozzle');
-end
+    nozzle.Acc = Acc;
+    nozzle.At = At;
+    nozzle.Ae = Ae;
+    nozzle.epsilon = Ae/At;
+    nozzle.rCurvature = 1; % Throat radius of curvature
 
-% Print summary
-if options.showSummary
-    fprintf('\n');
-    fprintf('====================================================\n');
-    fprintf('                 NOZZLE DESIGN SUMMARY              \n');
-    fprintf('====================================================\n');
+    nozzle.alpha = options.alpha;
+    nozzle.beta  = options.beta;
 
-    fprintf('Epsilon                 : %.4f [-]\n', Ae/At);
-    fprintf('Lambda                  : %.4f [-]\n', lambdaDiv);
+    nozzle.lConv = lConv;
+    nozzle.lDiv  = lDiv;
 
-    fprintf('\n');
-    fprintf('--------------- Areas ---------------\n');
-    fprintf('At                      : %.6e m^2\n', At);
-    fprintf('Ae                      : %.6e m^2\n', Ae);
-    fprintf('Acc                     : %.6e m^2\n', Acc);
+    % Plot
+    if options.plot
+        figure;
+        plot(x,  r, 'LineWidth', 1.5); hold on;
+        plot(x, -r, 'LineWidth', 1.5);
+        axis equal;
+        grid on;
+        xlabel('x [m]');
+        ylabel('r [m]');
+        title('Axisymmetric conical nozzle');
+    end
 
-    fprintf('\n');
-    fprintf('-------------- Radii ----------------\n');
-    fprintf('rt                      : %.6f m\n', rt);
-    fprintf('re                      : %.6f m\n', re);
-    fprintf('rcc                     : %.6f m\n', rcc);
+    % Print summary
+    if options.showSummary
+        fprintf('\n');
+        fprintf('====================================================\n');
+        fprintf('                 NOZZLE DESIGN SUMMARY              \n');
+        fprintf('====================================================\n');
 
-    fprintf('\n');
-    fprintf('------------- Diameters -------------\n');
-    fprintf('dt                      : %.6f m\n', 2*rt);
-    fprintf('de                      : %.6f m\n', 2*re);
-    fprintf('dcc                     : %.6f m\n', 2*rcc);
+        fprintf('Epsilon                 : %.4f [-]\n', Ae/At);
+        fprintf('Lambda                  : %.4f [-]\n', lambdaDiv);
 
-    fprintf('\n');
-    fprintf('------------- Lengths ---------------\n');
-    fprintf('Lconv                   : %.6f m\n', lConv);
-    fprintf('Ldiv                    : %.6f m\n', lDiv);
-    fprintf('Ltotal_nozzle           : %.6f m\n', lTotal);
+        fprintf('\n');
+        fprintf('--------------- Areas ---------------\n');
+        fprintf('At                      : %.6e m^2\n', At);
+        fprintf('Ae                      : %.6e m^2\n', Ae);
+        fprintf('Acc                     : %.6e m^2\n', Acc);
 
-    fprintf('\n');
-    fprintf('-------------- Angles ----------------\n');
-    fprintf('alpha                   : %.3f deg\n', alpha * 180/pi);
-    fprintf('beta                    : %.3f deg\n', beta * 180/pi);
-    fprintf('====================================================\n\n');
-end
+        fprintf('\n');
+        fprintf('-------------- Radii ----------------\n');
+        fprintf('rt                      : %.6f m\n', rt);
+        fprintf('re                      : %.6f m\n', re);
+        fprintf('rcc                     : %.6f m\n', rcc);
+
+        fprintf('\n');
+        fprintf('------------- Diameters -------------\n');
+        fprintf('dt                      : %.6f m\n', 2*rt);
+        fprintf('de                      : %.6f m\n', 2*re);
+        fprintf('dcc                     : %.6f m\n', 2*rcc);
+
+        fprintf('\n');
+        fprintf('------------- Lengths ---------------\n');
+        fprintf('Lconv                   : %.6f m\n', lConv);
+        fprintf('Ldiv                    : %.6f m\n', lDiv);
+        fprintf('Ltotal_nozzle           : %.6f m\n', lTotal);
+
+        fprintf('\n');
+        fprintf('-------------- Angles ----------------\n');
+        fprintf('alpha                   : %.3f deg\n', alpha * 180/pi);
+        fprintf('beta                    : %.3f deg\n', beta * 180/pi);
+        fprintf('====================================================\n\n');
+    end
 
 end

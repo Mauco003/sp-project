@@ -1,5 +1,11 @@
 function plotHollowCylinder(grain)
-    % plotHollowCylinder Plots a 3D hollow cylinder with light memory usage.
+% plotHollowCylinder - Plots a 3D hollow cylinder with light memory usage.
+%
+% SYNTAX:
+%  plotHollowCylinder(grain)
+%
+% INPUT:
+%  grain - A structure containing the properties of the grain
     
     % Define the number of points for the circle
     numPoints = 36; 

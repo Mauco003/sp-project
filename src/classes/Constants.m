@@ -1,6 +1,11 @@
 classdef Constants
-    %CONSTANTS Summary of this class goes here
-    %   Detailed explanation goes here
+% Constants - Class to store constants used in the code
+%
+% SYNTAX:
+%  constants = Constants()
+%
+% DESCRIPTION:
+%  This class stores constants used in the code, such as the gravity constant, universal gas constant, and ambient temperature.
     
     properties (Constant)
         g0 = 9.81                                                           % Gravity constant [m/s^2]
