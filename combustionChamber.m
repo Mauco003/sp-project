@@ -1,81 +1,114 @@
-function results = combustionChamber(casing, liner, nozzle, propellant, performance, constants, options)
+function results = combustionChamber(casing, liner, nozzle, grain, propellant, performance, constants)
 %% -----------------------------------------------------------------------
-% Function to size the combustion chamber and characterize the heat
+% Function to size the combustion chamber and nozzle's ablative materials, and characterize the heat
 % transfer throughout it. 
 %
 % INPUTS:
+% casing - struct including the casing parameters
+%       .thickness
+%       .density
+%       .hoopStress
+%       .safetyFactor
+%       .thermalConductivity
+%       .TMax
+%       .cost
 % liner - struct including the liner parameters
 %       .regressionRate
 %       .thickness
 %       .thermalConductivity
+%       .density
+%       .cost
+% nozzle - struct including the nozzle parameters
+%       .At
+%       .Ae
+%       .alpha
+%       .beta
+%       .rCurvature
+% grain - struct including the grain parameters
+%       .dInt0
+%       .dExt0
+%       .L0
+%
+% propellant - struct including the propellant parameters
+%       .cea - struct including the CEA outputs
+%           .ccTemperature
+%           .gamma
+%           .molarMass
+%           .mu
+%           .k
+%           .ccPressure
+% performance - struct including the performance parameters
+%       .cstar
+%       .mDot
 %
 % OUTPUTS:
-% results of thicknesses
-% UNITS:
+% results - struct including the results of the thermal model and optimization
+%       .q - heat flux to the wall [W/m^2]
+%       .hg - convective coefficient at the wall [W/m^2/K]
+%       .linerSurvives - boolean indicating whether the liner survives the burn time
+%       .casingSurvives - boolean indicating whether the casing survives the burn time
+%       .lt - liner thickness required for survival [m]
 %
 %
 % EXAMPLE USAGE:
+% results = combustionChamber(casing, liner, nozzle, propellant, performance, constants);
 %-------------------------------------------------------------------------
 %% Definition of variables
 arguments
     casing                    struct
     liner                     struct
     nozzle                    struct
+    grain                     struct
     propellant                struct
     performance               struct
     constants                 Constants
-    options.makePlot    (1,1) logical = true
-    options.showSummary (1,1) logical = true
 end
 
-% initial parameters for heat transfer
+% Getting input data
 T_cc = propellant.cea.ccTemperature;     % [K] temperature of combustion chamber
-%t_liner = liner.thickness;               % [mm] liner initial thickness
 k_liner = liner.thermalConductivity;
 
-r_burn = 8.88;                           % [mm/s]
-t_burn = 25;                             % [s]
+% Constants
+r_burn = constants.rb;                                % [mm/s]
+t_burn = constants.tBurn;                             % [s]
+h_out = constants.h_out;                              % [W/m^2/K], natural convection
+T_ambient = constants.T_ambient;                      % [K], assumed
 
-t_casing = casing.thickness;             % [mm]
+% Casing, liner, and other parameters
+t_casing = casing.thickness;                          % [mm]
 k_casing = casing.thermalConductivity;
 TMax = casing.TMax;
 
-h_out = 10;                              % [W/m^2/K], natural convection
-T_ambient = 293.15;                      % [K], assumed
-
-% chemistry and gas composition
-R = constants.R / propellant.cea.molarMass;
-
-gamma = propellant.cea.gamma;
-%pc    = propellant.ccPressure;
-pc = 70e5;  
-cStar = performance.cstar;
-muGas = propellant.cea.mu;
-cpGas = R * gamma/(gamma-1);
-PrGas = muGas*cpGas / propellant.cea.k; % Suppose it is constant for now
-
-% geometry of grain
-d_grain = 0.89;
+% Grain geometry
+d_grain = grain.dInt0;
 r_grain = d_grain/2;
-l_grain = 1.58;
+l_grain = grain.L0;
 
-% geometry of nozzle
+% Nozzle geometry
 At    = nozzle.At;
 alpha = nozzle.alpha;     % [rad]
 beta  = nozzle.beta;      % [rad]
 rt = sqrt(At/pi);
 Dt = rt*2;
+rCurve = nozzle.rCurvature;
 
-% use bartz correleation to estimate h
-M = 0;  % in cc
-T0 = T_cc;
+% Chemistry and gas composition
+R = constants.R / propellant.cea.molarMass;
+gamma = propellant.cea.gamma;
+pc    = propellant.ccPressure;
+cStar = performance.cstar;
+muGas = propellant.cea.mu;
+cpGas = R * gamma/(gamma-1);
+PrGas = muGas*cpGas / propellant.cea.k; 
+
+
+% Use bartz correleation to estimate h
 A = pi*r_grain^2;
 epsilon = A/At;
 omega = 0.6;    % viscosity exponent in Bartz correction [-]
-rCurve = nozzle.rCurvature;
 
 
-% iterate to find the real Tw and hg
+% Itertion parameters to find the real Tw and hg
 tol = 0.1;              % [K]
 error = 100000;
 error2 = 100000;
@@ -84,61 +117,36 @@ maxIter = 10000;
 iter = 0;
 liner_guess = 0.004;
 
-% Outer-side total resistance
-%R_out = t_liner/k_liner + t_casing/k_casing + 1/h_out; 
-
+% Iteration loop 
 while((error > tol) && (iter < maxIter) && (error2 > tol))
     % using MEOP as pc.
-    hg = bartzCorrelation(pc, cStar, Dt, rCurve, epsilon, muGas, cpGas, PrGas, Tw_guess, T_cc, T_cc, omega);
+    hg = bartzCorrelation(pc(1), cStar, Dt, rCurve, epsilon, muGas, cpGas, PrGas, Tw_guess, T_cc, T_cc, omega);
 
+    % Compute heat transfer problem
     R_out = liner_guess/k_liner + 1/hg;
-
     q = R_out*(T_cc - TMax);
-
     Tw_upd = T_cc - q/hg;
 
+    % Thickness of the liner based on Tw
     t_liner = k_liner/q * abs(TMax - Tw_upd);
 
-    % check error
+    % Update errors
     error = abs(Tw_upd - Tw_guess);
     error2 = abs(t_liner - liner_guess);
 
-    % updating Tw guess dependant on the error
-    
+    % Updating Tw guess dependant on the error
     Tw_guess = Tw_upd;
     liner_guess = t_liner;
     iter = iter + 1;
+
 end
 
-% % Heat flux
-% q = hg * (T_cc - Tw_upd);   % [W/m^2]
-% 
-% %% Interface temperatures
-% % 1 - convection from the gas to the liner
-% T_linerInner = Tw_guess;
-% 
-% % 2 - conduction from the liner to the casing
-% T_linerCasing = T_linerInner - q * (t_liner/k_liner);
-% 
-% % 3 - casing near side to far side ('to external environment')
-% T_casingOuter = T_linerCasing - q * (t_casing/k_casing);
-
-
 %% Sizing and optimization
-
-% First check casing temperature
-% if T_linerCasing < TMax
-%     casing.survival = true;
-% else
-%     % we no gucci
-%     casing.survival = false;
-% end
-
-% Next check lining exists for the entire burn time
+% Next check liner exists for the entire burn time
 linerConsumed = (liner.regressionRate* t_burn);   % [m]
-disp(linerConsumed);
 liner.survival = t_liner > linerConsumed;
 
+% Checking if the lienr survives
 if liner.survival
     % liner survives
     liner.survival = true;
@@ -147,17 +155,13 @@ else
     liner.survival = false;
 end
 
-% Results
+%% Results
 results = struct();
 
-% results.T_linerInner = T_linerInner;
-% results.T_linerCasing = T_linerCasing;
-% results.T_casingOuter = T_casingOuter;
 results.q = q;
 results.hg = hg;
-
 %results.casingSurvives = casing.survival;
 results.linerSurvives = liner.survival;
-results.lt = liner_guess;
+results.liner_thickness = liner_guess;
 
 end
