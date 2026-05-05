@@ -38,7 +38,7 @@ rbNominal = a*input.pcNominal^n;                                                
 
 
 %% Ideal thermodynamics & mass sizing
-[performanceNom, AtIdeal, AeIdeal] = performanceNomCalc(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
+[performanceNom, AtIdeal, AeIdeal] = computeNominalPerformance(input.thrust, propellant.cea.ccTemperature, input.pcNominal, input.peNominal, propellant.cea.gamma, propellant.cea.molarMass, constants);
 mPTot = performanceNom.mDot*input.burningTime;                                          % Total propellant mass [kg]
 
 
@@ -77,7 +77,7 @@ casing.density = 7850;   % kg/m^3
 %% LINER
 liner = struct();
 liner.thickness = 5e-3;
-liner.thermalConductivity = 0.225;
+liner.thermalConductivity = 0.125;
 liner.regressionRate = 0.225;         % kg/s*m^2
 liner.cost = 7;         % [cost per kg]
 liner.density = 1208;   % kg/m^3

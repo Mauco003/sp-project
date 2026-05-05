@@ -23,8 +23,8 @@ wCost = 1;                          % Penalty multiplier on cost
 
 %% optimization loop
 % ranges to search
-tL_vals = linspace(1e-5, 5e-2, 100);   % liner thickness [m]
-tC_vals = linspace((pc*grain.dExt0)/(2*hoopStress) * safetyFactor, 20e-2, 100);   % casing thickness [m]
+tL_vals = linspace(1e-5, 50e-2, 1000);   % liner thickness [m]
+tC_vals = linspace((pc*grain.dExt0)/(2*hoopStress) * safetyFactor, 0.2, 1000);   % casing thickness [m]
 
 sol.J = 1000000000000;
 
@@ -40,7 +40,7 @@ for i = 1:length(tL_vals)
             "makePlot", false, "showSummary", false);
 
         % Check survival constraint
-        if results.casingSurvives && results.linerSurvives
+%        if results.casingSurvives && results.linerSurvives
 
             % Compute cost + mass
             [J, massTotal, costTotal] = ccCost(liner, casing, wMass, wCost);
@@ -54,7 +54,7 @@ for i = 1:length(tL_vals)
                 sol.cost = costTotal;
                 sol.results = results;
             end
-        end
+ %       end
     end
 end
 

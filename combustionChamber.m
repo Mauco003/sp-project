@@ -30,7 +30,7 @@ end
 
 % initial parameters for heat transfer
 T_cc = propellant.cea.ccTemperature;     % [K] temperature of combustion chamber
-t_liner = liner.thickness;               % [mm] liner initial thickness
+%t_liner = liner.thickness;               % [mm] liner initial thickness
 k_liner = liner.thermalConductivity;
 
 r_burn = 8.88;                           % [mm/s]
@@ -76,58 +76,67 @@ rCurve = nozzle.rCurvature;
 
 
 % iterate to find the real Tw and hg
-tol = 1;              % [K]
+tol = 0.1;              % [K]
 error = 100000;
+error2 = 100000;
 Tw_guess = 800;         %[K]
-maxIter = 100;
+maxIter = 10000;
 iter = 0;
-
+liner_guess = 0.004;
 
 % Outer-side total resistance
-R_out = t_liner/k_liner + t_casing/k_casing + 1/h_out; 
+%R_out = t_liner/k_liner + t_casing/k_casing + 1/h_out; 
 
-while((error > tol) && iter < maxIter)
+while((error > tol) && (iter < maxIter) && (error2 > tol))
     % using MEOP as pc.
     hg = bartzCorrelation(pc, cStar, Dt, rCurve, epsilon, muGas, cpGas, PrGas, Tw_guess, T_cc, T_cc, omega);
 
-    % Modelling the heat transfer - use flat 1D as a first approx
-    Tw_upd = (hg*T_cc + T_ambient/R_out) / (hg + 1/R_out);
+    R_out = liner_guess/k_liner + 1/hg;
+
+    q = R_out*(T_cc - TMax);
+
+    Tw_upd = T_cc - q/hg;
+
+    t_liner = k_liner/q * abs(TMax - Tw_upd);
 
     % check error
     error = abs(Tw_upd - Tw_guess);
+    error2 = abs(t_liner - liner_guess);
 
     % updating Tw guess dependant on the error
     
     Tw_guess = Tw_upd;
+    liner_guess = t_liner;
     iter = iter + 1;
 end
 
-% Heat flux
-q = hg * (T_cc - Tw_upd);   % [W/m^2]
-
-%% Interface temperatures
-% 1 - convection from the gas to the liner
-T_linerInner = Tw_guess;
-
-% 2 - conduction from the liner to the casing
-T_linerCasing = T_linerInner - q * (t_liner/k_liner);
-
-% 3 - casing near side to far side ('to external environment')
-T_casingOuter = T_linerCasing - q * (t_casing/k_casing);
+% % Heat flux
+% q = hg * (T_cc - Tw_upd);   % [W/m^2]
+% 
+% %% Interface temperatures
+% % 1 - convection from the gas to the liner
+% T_linerInner = Tw_guess;
+% 
+% % 2 - conduction from the liner to the casing
+% T_linerCasing = T_linerInner - q * (t_liner/k_liner);
+% 
+% % 3 - casing near side to far side ('to external environment')
+% T_casingOuter = T_linerCasing - q * (t_casing/k_casing);
 
 
 %% Sizing and optimization
 
 % First check casing temperature
-if T_linerCasing < TMax
-    casing.survival = true;
-else
-    % we no gucci
-    casing.survival = false;
-end
+% if T_linerCasing < TMax
+%     casing.survival = true;
+% else
+%     % we no gucci
+%     casing.survival = false;
+% end
 
 % Next check lining exists for the entire burn time
-linerConsumed = (liner.regressionRate / liner.density * t_burn)*2.5;   % [m]
+linerConsumed = (liner.regressionRate* t_burn);   % [m]
+disp(linerConsumed);
 liner.survival = t_liner > linerConsumed;
 
 if liner.survival
@@ -141,13 +150,14 @@ end
 % Results
 results = struct();
 
-results.T_linerInner = T_linerInner;
-results.T_linerCasing = T_linerCasing;
-results.T_casingOuter = T_casingOuter;
+% results.T_linerInner = T_linerInner;
+% results.T_linerCasing = T_linerCasing;
+% results.T_casingOuter = T_casingOuter;
 results.q = q;
 results.hg = hg;
 
-results.casingSurvives = casing.survival;
+%results.casingSurvives = casing.survival;
 results.linerSurvives = liner.survival;
+results.lt = liner_guess;
 
 end
