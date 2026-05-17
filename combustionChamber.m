@@ -144,24 +144,33 @@ end
 %% Sizing and optimization
 % Next check liner exists for the entire burn time
 linerConsumed = (liner.regressionRate* t_burn);   % [m]
-liner.survival = t_liner > linerConsumed;
 
-% Checking if the lienr survives
-if liner.survival
-    % liner survives
-    liner.survival = true;
-else
-    % liner is burned through before end of burn
-    liner.survival = false;
-end
+% Total liner thickness required:
+% thermal protection thickness + consumed ablative thickness
+linerRequired = liner_guess + linerConsumed;     % [m]
+
+% Check if selected candidate liner thickness is sufficient
+liner.survival = liner.thickness >= linerRequired;
+
+% Check casing hoop stress
+sigmaHoop = pc(1) * grain.dExt0 / (2 * casing.thickness);   % [Pa]
+
+% Allowable stress including safety factor
+sigmaAllow = casing.hoopStress / casing.safetyFactor;        % [Pa]
+
+casing.survival = sigmaHoop <= sigmaAllow;
+
 
 %% Results
 results = struct();
 
 results.q = q;
 results.hg = hg;
-%results.casingSurvives = casing.survival;
+results.casingSurvives = casing.survival;
 results.linerSurvives = liner.survival;
 results.liner_thickness = liner_guess;
+results.linerRequired = linerRequired;
+results.thermalMargin = liner.thickness / linerRequired;
+results.structuralMargin = sigmaAllow / sigmaHoop;
 
 end
