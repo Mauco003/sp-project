@@ -303,34 +303,54 @@ function plotMCResults(mcData, config)
 
     %% Cooling Jacket Risk
     if config.runCoolingJacket && analysisMode == 1
+        % Extract Data
         TOutlet = mcData.thermal.TOutlet;
+        maxQ = mcData.thermal.maxQ;
         boilingLimit = mcData.thermal.boilingLimit;
         
+        TBCHot = mcData.thermal.TBCHot;
+        TBCMaxLimit = mcData.thermal.TBCMaxLimit;
+        
+        INCONELHot = mcData.thermal.INCONELHot;
+        INCONELMaxLimit = mcData.thermal.INCONELMaxLimit;
+        
+        % Bundle plot config for the helper function
+        pConfig.fontName = fontName;
+        pConfig.fontSize = fontSize;
+        pConfig.techOrange = techOrange;
+        
         figure('Color', 'w', 'Name', 'Cooling Jacket Risk Analysis', 'WindowState', 'maximized');
+        sgtitle(sprintf('Cooling Jacket Thermal Analysis for water mass flow rate %.2f kg/s', mcData.thermal.mDotWater), ...
+            'FontName', fontName, 'FontSize', fontSize + 2, 'FontWeight', 'bold');
+
+        % Subplot 1: TOutlet vs Boiling Limit
+        subplot(2, 2, 1);
+        plotThermalRisk(TOutlet, boilingLimit, 'Boiling Limit', 'Max Coolant Wall Temp [K]', 'Coolant Thermal Risk', techBlue, pConfig);
+
+        % Subplot 2: maxQ Distribution (No explicit limit line)
+        subplot(2, 2, 2);
         hold on; grid on; box on;
-        histogram(TOutlet, 'Normalization', 'pdf', 'FaceColor', techBlue, 'EdgeColor', 'w');
-        plotNormalFit(TOutlet);
-        
-        % Bounds and formatting
-        dataSpread = max(TOutlet) - min(TOutlet);
-        xlim([min(TOutlet) - (dataSpread*0.5), max(TOutlet) + (dataSpread*0.5)]); 
-        xline(mean(TOutlet), '--', 'Mean Temp', 'Color', [0.3 0.3 0.3], 'LineWidth', 2, 'LabelVerticalAlignment', 'top', 'FontName', fontName, 'FontSize', 14);
-        
-        ylims = ylim;
-        text(max(xlim), ylims(2)*0.85, sprintf('Boiling Limit (%.1f K) \\rightarrow  ', boilingLimit), ...
-            'Color', techOrange, 'FontWeight', 'bold', 'FontSize', 14, 'FontName', fontName, ...
-            'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle');
-        
-        xlabel('Water Outlet Temperature [K]', 'FontWeight', 'bold');
+        histogram(maxQ, 'Normalization', 'pdf', 'FaceColor', techOrange, 'EdgeColor', 'w');
+        plotNormalFit(maxQ);
+        dataSpreadQ = max(maxQ) - min(maxQ);
+        if dataSpreadQ > 0
+            xlim([min(maxQ) - (dataSpreadQ*0.5), max(maxQ) + (dataSpreadQ*0.5)]); 
+        end
+        xline(mean(maxQ), '--', 'Mean Heat Flux', 'Color', [0.3 0.3 0.3], 'LineWidth', 2, 'LabelVerticalAlignment', 'top', 'FontName', fontName, 'FontSize', 14);
+        xlabel('Maximum Heat Flux (maxQ) [W/m^2]', 'FontWeight', 'bold');
         ylabel('Probability Density [-]', 'FontWeight', 'bold');
-        title('Cooling Jacket Thermal Distribution', 'FontWeight', 'bold');
+        title('Cooling Jacket Heat Flux Distribution', 'FontWeight', 'bold');
         set(gca, 'FontName', fontName, 'FontSize', fontSize, 'GridLineStyle', '--');
         
-        dim = [0.15 0.75 0.3 0.1];
-        annotation('textbox', dim, 'String', sprintf('Probability of Exceeding Limit: %.2f%%', mcData.thermal.PoF), ...
-            'FitBoxToText', 'on', 'BackgroundColor', 'w', 'EdgeColor', techOrange, 'FontName', fontName, 'FontSize', 14, 'FontWeight', 'bold');
-    end
+        % Subplot 3: TBC Temp vs Limit
+        subplot(2, 2, 3);
+        plotThermalRisk(TBCHot, TBCMaxLimit, 'TBC Limit', 'TBC Maximum Temperature [K]', 'TBC Thermal Risk', techPurple, pConfig);
 
+        % Subplot 4: INCONEL Temp vs Limit
+        subplot(2, 2, 4);
+        plotThermalRisk(INCONELHot, INCONELMaxLimit, 'INCONEL Limit', 'INCONEL Maximum Temperature [K]', 'INCONEL Thermal Risk', techGreen, pConfig);
+    end
+    % pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom pom 
     %% Local Helper Functions 
     
     function plotRobustHistogram(data, faceColor, titleText, fontName)
@@ -366,5 +386,47 @@ function plotMCResults(mcData, config)
         hold on;
         plot(xRange, yFit, '--', 'Color', [0.4 0.4 0.4], 'LineWidth', 2, 'DisplayName', 'Normal Fit');
     end
-
+    
+    function plotThermalRisk(data, limitVal, limitName, xLabelText, titleText, faceColor, pConfig)
+        % plotThermalRisk Handles the repetitive histogram + dynamic limit line logic
+        hold on; grid on; box on;
+        histogram(data, 'Normalization', 'pdf', 'FaceColor', faceColor, 'EdgeColor', 'w');
+        plotNormalFit(data);
+        
+        % Bounds and formatting
+        dataSpread = max(data) - min(data);
+        if dataSpread > 0
+            xlim([min(data) - (dataSpread*0.5), max(data) + (dataSpread*0.5)]); 
+        end
+        xline(mean(data), '--', 'Mean', 'Color', [0.3 0.3 0.3], 'LineWidth', 2, 'LabelVerticalAlignment', 'top', 'FontName', pConfig.fontName, 'FontSize', 14);
+        
+        % Dynamic Limit Line logic
+        xl = xlim;
+        yl = ylim;
+        if limitVal >= xl(1) && limitVal <= xl(2)
+            xline(limitVal, '-.', limitName, 'Color', pConfig.techOrange, 'LineWidth', 2.5, ...
+                'LabelVerticalAlignment', 'middle', 'LabelHorizontalAlignment', 'left', ...
+                'FontName', pConfig.fontName, 'FontSize', 14, 'FontWeight', 'bold');
+        elseif limitVal > xl(2)
+            text(xl(2), yl(2)*0.85, sprintf('%s (%.1f K) \\rightarrow  ', limitName, limitVal), ...
+                'Color', pConfig.techOrange, 'FontWeight', 'bold', 'FontSize', 14, 'FontName', pConfig.fontName, ...
+                'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle');
+        else
+            text(xl(1), yl(2)*0.85, sprintf('  \\leftarrow %s (%.1f K)', limitName, limitVal), ...
+                'Color', pConfig.techOrange, 'FontWeight', 'bold', 'FontSize', 14, 'FontName', pConfig.fontName, ...
+                'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle');
+        end
+        
+        % Labels and Probability calculation
+        xlabel(xLabelText, 'FontWeight', 'bold');
+        ylabel('Probability Density [-]', 'FontWeight', 'bold');
+        title(titleText, 'FontWeight', 'bold');
+        set(gca, 'FontName', pConfig.fontName, 'FontSize', pConfig.fontSize, 'GridLineStyle', '--');
+        
+        % Localized Probability Box
+        PoF = (sum(data >= limitVal) / length(data)) * 100;
+        text(xl(1) + (xl(2)-xl(1))*0.03, yl(2)*0.95, sprintf('P(Exceed): %.2f%%', PoF), ...
+            'BackgroundColor', 'w', 'EdgeColor', pConfig.techOrange, 'FontName', pConfig.fontName, ...
+            'FontSize', 12, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
+    end
 end

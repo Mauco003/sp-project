@@ -83,11 +83,16 @@ function printMCSummary(mcData, config)
 
     %% Thermal Risk
     if config.runCoolingJacket && config.analysisMode == 1
-        fprintf(' [COOLING JACKET RISK ANALYSIS]\n');
+        fprintf(' [COOLING JACKET RISK ANALYSIS (water mass flow rate %f kg/s)]\n', mcData.thermal.mDotWater);
         muTemp = mean(mcData.thermal.TOutlet, 'omitnan');
         maxTemp = max(mcData.thermal.TOutlet, [], 'omitnan');
         
-        fprintf(' Outlet Temp (K)  : Mean = %6.2f | Max Observed  = %6.2f\n', muTemp, maxTemp);
+        % Calculate maxQ stats
+        muMaxQ = mean(mcData.thermal.maxQ, 'omitnan');
+        peakMaxQ = max(mcData.thermal.maxQ, [], 'omitnan');
+        
+        fprintf(' Maximum Coolant Side Wall temperature (K)  : Mean = %6.2f | Max Observed  = %6.2f\n', muTemp, maxTemp);
+        fprintf(' Max Heat Flux    : Mean = %10.2e | Max Observed  = %10.2e\n', muMaxQ, peakMaxQ);
         fprintf(' Boiling Limit    : %6.2f K\n', mcData.thermal.boilingLimit);
         
         if mcData.thermal.PoF > 0
@@ -100,3 +105,4 @@ function printMCSummary(mcData, config)
         fprintf('===========================================================================\n\n');
     end
 end
+

@@ -1,6 +1,9 @@
-% mainMC - A unified Monte Carlo simulation script combining comprehensive 
+% mainMC - Multiphysics Analysis of Grain regression, Gas properties and Internal cooling (MAGGI)
+% A unified Monte Carlo simulation script combining comprehensive 
 % performance analysis and rapid bounds analysis based on distinct modes.
 % Includes an optional thermal risk analysis for the cooling jacket.
+
+% CHANGE CONFIGURATION OF THE SIMULATION SOME SECTIONS BELOW
 
 
 %% Setup
@@ -28,10 +31,10 @@ mcConfig.useComprehensive = false;
 
 % Toggle Thermal Finale:
 % true = Run nozzleThermalModel using distributions (works only on mode 1)
-mcConfig.runCoolingJacket = false; 
+mcConfig.runCoolingJacket = true; 
 
 % Sampling Settings
-mcConfig.correlationType = 'independent'; % 'correlated' or 'independent'
+mcConfig.correlationType = 'correlated'; % 'correlated' or 'independent'
 mcConfig.numIter = 100; % Base iterations (generates numIter^2 simulations)
 
 % Plotting Aesthetic Config
@@ -250,7 +253,7 @@ parfor index = 1:totalRunsMC
     % Execution
     if mcConfig.useComprehensive
         % Full performance computation
-        [tMCOutput, perfMCOutput, ~, ~] = computePerformance(aMC, nMC, ...
+        [tMCOutput, ~, perfMCOutput , ~] = computePerformance(aMC, nMC, ...
             propellantMC, perfNomMC, nozzleMC, grainMC, constantsMC, ...
             "alpha", alphaMC, "CEASurrogate", surrogateData);
         
@@ -267,12 +270,25 @@ parfor index = 1:totalRunsMC
         % Evaluation of for how much time the thrust is "enough" (e.g. 90% of the design one)
         thrustThresholdRatio = 0.9;
         threshold = thrustThresholdRatio * design.input.thrust; 
-        idx = perfMCOutput.thrust >= threshold;
+        
+        % Create a high-resolution time vector (2000 points provides excellent precision)
+        tInterp = linspace(tMCOutput(1), tMCOutput(end), 2000);
+        
+        % Interpolate the thrust curve using 'pchip' to preserve shape without overshooting
+        thrustInterp = interp1(tMCOutput, perfMCOutput.thrust, tInterp, 'pchip');
+        
+        % Find indices where the interpolated thrust meets the threshold
+        idx = thrustInterp >= threshold;
         
         if any(idx)
-            timeVec = tMCOutput(idx);
+            timeVec = tInterp(idx);
+            % Calculates the continuous span from the first crossing to the last crossing
             thrustReliability(index) = ((timeVec(end) - timeVec(1)) / burnTime(index)) * 100;
+        else
+            % Fallback in case the motor fails to ever reach 90% of design thrust
+            thrustReliability(index) = 0; 
         end
+
     else
         % Reduced performance evaluation (just time and pressure trace)
         [tMC, pMC, ~] = computeBurn(aMC, nMC, rhoPMC, cStarMC, grainMC, AtMC);
@@ -330,21 +346,30 @@ end
 % and std. The themal model needs just one value of chamber pressure, so
 % the MEOP is chosen for testing
 
-boilingLimit = 150 + 273.15;
+boilingLimit = cooling(4).Tboil;
+TBCMaxTemperature = cooling(2).Tmax; % maxmimum temperature for TBC
+INCONELMaxTemperature = cooling(3).Tmax;  % maxmimum temperature for INCONEL
+
 if mcConfig.runCoolingJacket && mcConfig.analysisMode == 1
 
     ccPressureMCCJVec = MEOP;
     
 
-    % After several analysis a mass flow rate of 2 kg/s was chosen
+    % After several analysis a mass flow rate of 1 kg/s was chosen
     % So a specification in the option of nozzleThermalModel was added
-    mDotWaterMC = 2;
-    ncaseMDot = length(mDotWaterMC);
+    mDotWaterMC = 1;
+    if length(mDotWaterMC) > 1
+        error("Further plots are not going to work if mDotWater is not a scalar)")
+    else
+        ncaseMDot = 1; 
+    end
 
     % Pre-allocate outputs
     waterOutletTemperatureListMC = NaN(totalRunsMC, ncaseMDot);
     maxTcoldListMC = NaN(totalRunsMC, ncaseMDot);
     maxQCEAListMC = NaN(totalRunsMC, ncaseMDot);
+    TBCHotListMC = NaN(totalRunsMC, ncaseMDot);
+    INCONELHotListMC = NaN(totalRunsMC, ncaseMDot);
 
 
     parfor index = 1:totalRunsMC
@@ -354,12 +379,15 @@ if mcConfig.runCoolingJacket && mcConfig.analysisMode == 1
             performanceCEA, cooling, constants, "showSummary", false, ...
             "savePlots", false, "mDotList", mDotWaterMC, "GasCEA", thermalModelOut.GasCEA);
 
-        waterOutletTemperatureListMC(index, :) = outMC.waterOutletTemperatureList;
-        maxTcoldListMC(index, :) = outMC.maxTcoldList;
-        maxQCEAListMC(index, :) = outMC.maxQCEAList;
+        TCEA_all = outMC.TCEA_all{:};
+        waterOutletTemperatureListMC(index) = outMC.waterOutletTemperatureList;
+        maxTcoldListMC(index) = outMC.maxTcoldList;
+        maxQCEAListMC(index) = outMC.maxQCEAList;
+        TBCHotListMC(index) = max(TCEA_all(:, 2));
+        INCONELHotListMC(index) = max(TCEA_all(:, 3));
     end
-    TOutlet = waterOutletTemperatureListMC;
-    PoF = (sum(TOutlet >= boilingLimit) / totalRunsMC) * 100;
+    maxTcold = maxTcoldListMC;
+    PoF = (sum(maxTcold >= boilingLimit) / totalRunsMC) * 100;
 end
 
 
@@ -421,9 +449,15 @@ end
 
 % Pack thermal outputs
 if mcConfig.runCoolingJacket && mcConfig.analysisMode == 1
-    mcData.thermal.TOutlet = TOutlet;
+    mcData.thermal.mDotWater = mDotWaterMC;
+    mcData.thermal.TOutlet = maxTcold;
+    mcData.thermal.maxQ = maxQCEAListMC;
+    mcData.thermal.TBCHot = TBCHotListMC;
+    mcData.thermal.INCONELHot = INCONELHotListMC;
     mcData.thermal.PoF = PoF;
     mcData.thermal.boilingLimit = boilingLimit;
+    mcData.thermal.TBCMaxLimit = TBCMaxTemperature; 
+    mcData.thermal.INCONELMaxLimit = INCONELMaxTemperature;
 end
 
 % Call external plotting function
@@ -432,5 +466,6 @@ if mcConfig.plots.plotFigs, plotMCResults(mcData, mcConfig); end
 % Call external console summary printout
 if mcConfig.plots.plotSumm, printMCSummary(mcData, mcConfig); end
 
+%%
 tEndDD = toc;
 fprintf('\nSimulation complete in %.2f seconds.\n', tEndDD);

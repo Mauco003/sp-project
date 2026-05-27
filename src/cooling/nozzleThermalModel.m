@@ -23,6 +23,17 @@ function out = nozzleThermalModel(design, input, propellant, nozzle, performance
 %
 % OUTPUT:
 %  out: struct containing the results of the thermal model computation
+%{
+   ____   _   _      _       ___     _   _ U _____ u  _____      _            ____   _   _    _   _    _         _           ____  U _____ u      ____              ____     ____    U  ___ u 
+U /"___| |'| |'| U  /"\  u  / " \ U |"|u| |\| ___"|/ |_ " _| U  /"\  u     U /"___| |'| |'|U |"|u| |  |"|    U  /"\  u      |  _"\ \| ___"|/    U|  _"\ u  ___    U|  _"\ uU|  _"\ u  \/"_ \/ 
+\| | u  /| |_| |\ \/ _ \/  | |"| | \| |\| | |  _|"     | |    \/ _ \/      \| | u  /| |_| |\\| |\| |U | | u   \/ _ \/      /| | | | |  _|"      \| |_) |/ |_"_|   \| |_) |/\| |_) |/  | | | | 
+ | |/__ U|  _  |u / ___ \ /| |_| |\ | |_| | | |___    /| |\   / ___ \       | |/__ U|  _  |u | |_| | \| |/__  / ___ \      U| |_| |\| |___       |  __/    | |     |  __/   |  __/.-,_| |_| | 
+  \____| |_| |_| /_/   \_\U \__\_\u<<\___/  |_____|  u |_|U  /_/   \_\       \____| |_| |_| <<\___/   |_____|/_/   \_\      |____/ u|_____|      |_|     U/| |\u   |_|      |_|    \_)-\___/  
+ _// \\  //   \\  \\    >>   \\// (__) )(   <<   >>  _// \\_  \\    >>      _// \\  //   \\(__) )(    //  \\  \\    >>       |||_   <<   >>      ||>>_.-,_|___|_,-.||>>_    ||>>_       \\    
+(__)(__)(_") ("_)(__)  (__) (_(__)    (__) (__) (__)(__) (__)(__)  (__)    (__)(__)(_") ("_)   (__)  (_")("_)(__)  (__)     (__)_) (__) (__)    (__)__)\_)-' '-(_/(__)__)  (__)__)     (__)  
+
+(spanish for cooling jacket)
+%}
 
 
     arguments
@@ -394,9 +405,9 @@ function out = nozzleThermalModel(design, input, propellant, nozzle, performance
 
     if options.showSummary
         fprintf('\n');
-        fprintf('============================================================\n');
+        fprintf('==================================================================\n');
         fprintf('            NOZZLE THERMAL MODEL - DISCRETIZED              \n');
-        fprintf('============================================================\n');
+        fprintf('==================================================================\n');
         fprintf('tWall                         : %.6e m\n', tWall);
         fprintf('tTBC                          : %.6e m\n', tTBC);
         fprintf('Water inlet temp              : %.2f C\n', waterT0 - 273.15);
@@ -422,7 +433,7 @@ function out = nozzleThermalModel(design, input, propellant, nozzle, performance
             fprintf('%10.4f    %s    %14.4e    %12.2f    %d\n', ...
                 mDotList(j), toutStr, maxQCEAList(j), maxTcoldList(j) - 273.15, validMdotMask(j));
         end
-        fprintf('============================================================\n\n');
+        fprintf('==================================================================\n\n');
     end
 
     %% PLOTS
@@ -663,9 +674,7 @@ function out = nozzleThermalModel(design, input, propellant, nozzle, performance
         end
 
         % hola
-        %% ------------------------------------------------------------------------
         % 1) Outlet water temperature vs mass flow (constant qDot = qDotMax)
-        % -------------------------------------------------------------------------
         if design.found
 
             mFlow = 1:10;          % [kg/s]
