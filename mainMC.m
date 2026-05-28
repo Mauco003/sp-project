@@ -469,3 +469,7 @@ if mcConfig.plots.plotSumm, printMCSummary(mcData, mcConfig); end
 %%
 tEndDD = toc;
 fprintf('\nSimulation complete in %.2f seconds.\n', tEndDD);
+
+% Maybe it is not a professional thing, but here's a playlist in theme with everything done in this project:
+% https://open.spotify.com/playlist/7rv59VIUexwUDMbiUhJUmb?si=900d566736ff42dc
+% Hope this playlist makes the work less hard and more enjoyable as it did for us :)

@@ -1,7 +1,4 @@
 %% Setup
-% Maybe is not a professional thing, but here a playlist we listened to while coding this is:
-% https://open.spotify.com/playlist/7rv59VIUexwUDMbiUhJUmb?si=900d566736ff42dc
-% Hope this playlist make the work less hard and more enjoyable for you as it did for us :)
 
 clear; close all; clc
 
@@ -11,7 +8,6 @@ propellant = propellantConfig();
 cooling = coolingConfig(propellant);
 [casing, liner] = casingConfig();
 
-x
 
 %% Configuraiton Data
 % Generic constants

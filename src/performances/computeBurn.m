@@ -51,11 +51,10 @@ end
 
 function dx = burnODE(~, x, SRM)
     % burnODE - Defines the system of ODEs for the burn process based on Vieille's law and the geometry of the grain.
-
-
+    
     a = SRM.a;
     rhoP = SRM.rhoP;
-    cStar = SRM.cStar; % Recovering unit measure balanced to other terms
+    cStar = SRM.cStar;
     rExt = SRM.rExt;
     Athroat = SRM.Athroat;
     n = SRM.n;
